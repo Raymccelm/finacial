@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Financial Dashboard v2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tracker-input {
+            width: 100px; padding: 8px; border-radius: 6px; border: 1px solid #D1D5DB;
+            text-align: right; background-color: #F9FAFB;
+        }
+        .positive { color: #10B981; }
+        .negative { color: #EF4444; }
+        .neutral { color: #6B7280; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white; padding: 2rem; border-radius: 0.5rem;
+            width: 90%; max-width: 500px;
+        }
+        .btn-withdraw {
+            background-color: #fde047; color: #713f12; font-size: 0.75rem;
+            padding: 2px 8px; border-radius: 9999px; font-weight: 500;
+            border: 1px solid #facc15;
+            cursor: pointer;
+        }
+        .btn-withdraw:hover { background-color: #facc15; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-6">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-gray-900">Dynamic Financial Dashboard <span class="text-blue-600">v2.0</span></h1>
+            <p class="text-lg text-gray-600 mt-2">Manage Income, Spending, and Goals in Real-Time</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Column: Live Status & Actions -->
+            <div class="lg:col-span-1 bg-white p-5 rounded-lg shadow-lg space-y-6">
+                <!-- Income Tracker -->
+                <div>
+                    <h2 class="text-xl font-bold mb-3">Live Income Tracker</h2>
+                    <div id="shortfall-warning" class="p-3 rounded-md mb-3 text-center"></div>
+                    <form id="income-form" class="space-y-3">
+                        <input type="text" id="income-source" placeholder="Source (e.g., Leslie Pay)" class="w-full p-2 border rounded" required>
+                        <input type="number" id="income-amount" placeholder="Amount" class="w-full p-2 border rounded" step="0.01" required>
+                        <button type="submit" class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">Log Income</button>
+                    </form>
+                    <div id="income-log" class="mt-3 text-sm space-y-1"></div>
+                </div>
+                
+                <!-- Action Center -->
+                <div>
+                    <h2 class="text-xl font-bold mb-3">Action Center</h2>
+                     <div class="space-y-3">
+                        <button id="finalize-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md">
+                            Finalize Week & Start New
+                        </button>
+                        <button id="hard-reset-button" class="w-full bg-red-600 hover:bg-red-700 text-white p-2 rounded">Reset All Data</button>
+                    </div>
+                </div>
+
+                <!-- Master Budget Reference -->
+                <details>
+                    <summary class="font-semibold cursor-pointer">View Master Budget Plan</summary>
+                    <div class="mt-2 text-xs text-gray-600 space-y-2">
+                        <p><strong>Weekly Target Transfer:</strong> $2,738.34</p>
+                        <p><strong>Guaranteed Income:</strong> $2,324.92 / week</p>
+                        <p><strong>Accelerated Debt Payoff:</strong> $189.05 / week</p>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Center Column: Spending & Savings Trackers -->
+            <div class="lg:col-span-2 bg-white p-5 rounded-lg shadow-lg space-y-6">
+                <!-- Weekly Spending Tracker -->
+                <div>
+                    <h2 class="text-xl font-bold mb-2">Weekly Spending Tracker</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="py-2 px-2 text-left text-xs font-semibold text-gray-600">Category</th>
+                                    <th class="py-2 px-2 text-right text-xs font-semibold text-gray-600">Available</th>
+                                    <th class="py-2 px-2 text-right text-xs font-semibold text-gray-600">Spent</th>
+                                    <th class="py-2 px-2 text-right text-xs font-semibold text-gray-600">Remaining</th>
+                                </tr>
+                            </thead>
+                            <tbody id="variable-tracker-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sinking Funds Tracker -->
+                <div>
+                    <h2 class="text-xl font-bold mb-2">Sinking Funds & Goals</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="py-2 px-2 text-left text-xs font-semibold text-gray-600">Category</th>
+                                    <th class="py-2 px-2 text-right text-xs font-semibold text-gray-600">Weekly Add</th>
+                                    <th class="py-2 px-2 text-right text-xs font-semibold text-gray-600">Total Saved</th>
+                                    <th class="py-2 px-2 text-center text-xs font-semibold text-gray-600">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sinking-funds-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Row: Financial Report -->
+            <div class="lg:col-span-3 bg-white p-5 rounded-lg shadow-lg">
+                <h2 class="text-xl font-bold mb-3">Financial Report</h2>
+                <div class="overflow-y-auto max-h-96 border rounded-md">
+                     <table class="min-w-full text-sm">
+                        <thead class="bg-gray-200 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-2 text-left text-xs font-semibold text-gray-600">Date</th>
+                                <th class="py-2 px-2 text-left text-xs font-semibold text-gray-600">Type</th>
+                                <th class="py-2 px-2 text-left text-xs font-semibold text-gray-600">Details</th>
+                                <th class="py-2 px-2 text-right text-xs font-semibold text-gray-600">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdrawal Modal -->
+    <div id="withdrawal-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-lg font-bold mb-4">Withdraw from Sinking Fund</h3>
+            <form id="withdrawal-form">
+                <input type="hidden" id="modal-category-index">
+                <input type="hidden" id="modal-category-type">
+                <div class="mb-3">
+                    <label for="modal-amount" class="block mb-1">Amount:</label>
+                    <input type="number" id="modal-amount" step="0.01" class="w-full p-2 border rounded" required>
+                </div>
+                <div class="mb-4">
+                    <label for="modal-note" class="block mb-1">Note:</label>
+                    <input type="text" id="modal-note" class="w-full p-2 border rounded" placeholder="e.g., John's birthday" required>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="modal-cancel" class="bg-gray-200 p-2 px-4 rounded">Cancel</button>
+                    <button type="submit" class="bg-blue-600 text-white p-2 px-4 rounded">Confirm Withdrawal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // DOM Elements
+        const elements = {
+            shortfallWarning: document.getElementById('shortfall-warning'),
+            incomeForm: document.getElementById('income-form'),
+            incomeSource: document.getElementById('income-source'),
+            incomeAmount: document.getElementById('income-amount'),
+            incomeLog: document.getElementById('income-log'),
+            variableTrackerBody: document.getElementById('variable-tracker-body'),
+            sinkingFundsBody: document.getElementById('sinking-funds-body'),
+            reportBody: document.getElementById('report-body'),
+            finalizeButton: document.getElementById('finalize-button'),
+            hardResetButton: document.getElementById('hard-reset-button'),
+            modal: document.getElementById('withdrawal-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalForm: document.getElementById('withdrawal-form'),
+            modalCancel: document.getElementById('modal-cancel'),
+            modalCategoryIndex: document.getElementById('modal-category-index'),
+            modalCategoryType: document.getElementById('modal-category-type'),
+            modalAmount: document.getElementById('modal-amount'),
+            modalNote: document.getElementById('modal-note')
+        };
+
+        const WEEKLY_BUDGET_TARGET = 2738.34;
+        let appState = {};
+
+        const initialState = {
+            currentWeekIncome: 0,
+            transactions: [],
+            variable: [
+                { category: 'Food', budget: 500.00, rollover: 0, actual: 0 },
+                { category: 'Fuel', budget: 80.00, rollover: 0, actual: 0 },
+                { category: 'Rideshare', budget: 50.00, rollover: 0, actual: 0 },
+                { category: 'Medications', budget: 34.64, rollover: 0, actual: 0 }
+            ],
+            sinking: [
+                { category: 'Water', weekly: 24.62, accumulated: 0 },
+                { category: 'Internet Security', weekly: 3.56, accumulated: 0 },
+                { category: 'Licensing Car', weekly: 6.25, accumulated: 0 },
+                { category: 'Car Rego', weekly: 16.92, accumulated: 0 },
+                { category: 'Maintenance Car', weekly: 11.54, accumulated: 0 },
+                { category: 'School Costs', weekly: 30.77, accumulated: 0 },
+            ],
+            goals: [
+                { category: 'Gifts Fund', weekly: 58.00, accumulated: 0 },
+                { category: 'Holiday Fund', weekly: 192.00, accumulated: 0 },
+            ]
+        };
+
+        // --- State Management ---
+        function saveState() {
+            localStorage.setItem('budgetDashboardState_v2', JSON.stringify(appState));
+        }
+
+        function loadState() {
+            const savedState = localStorage.getItem('budgetDashboardState_v2');
+            appState = savedState ? JSON.parse(savedState) : JSON.parse(JSON.stringify(initialState));
+        }
+
+        function addTransaction(type, details, amount) {
+            const date = new Date().toLocaleDateString('en-AU');
+            appState.transactions.unshift({ date, type, details, amount });
+        }
+
+        // --- Rendering ---
+        function render() {
+            renderWarning();
+            renderVariableTracker();
+            renderSinkingFunds();
+            renderReport();
+        }
+
+        function renderWarning() {
+            const shortfall = WEEKLY_BUDGET_TARGET - appState.currentWeekIncome;
+            elements.shortfallWarning.innerHTML = '';
+            if (shortfall > 0) {
+                elements.shortfallWarning.className = 'p-3 rounded-md mb-3 text-center font-bold text-red-800 bg-red-100';
+                elements.shortfallWarning.textContent = `Shortfall: $${shortfall.toFixed(2)}`;
+            } else {
+                elements.shortfallWarning.className = 'p-3 rounded-md mb-3 text-center font-bold text-green-800 bg-green-100';
+                elements.shortfallWarning.textContent = `Surplus: $${Math.abs(shortfall).toFixed(2)}`;
+            }
+        }
+
+        function renderVariableTracker() {
+            elements.variableTrackerBody.innerHTML = '';
+            appState.variable.forEach((item, index) => {
+                const available = item.budget + item.rollover;
+                const remaining = available - item.actual;
+                const row = document.createElement('tr');
+                row.classList.add('border-b');
+                row.innerHTML = `
+                    <td class="py-2 px-2">
+                        ${item.category}
+                        <div class="text-xs text-gray-500">Budget: $${item.budget.toFixed(2)} | Rollover: <span class="${item.rollover >= 0 ? 'positive' : 'negative'}">$${item.rollover.toFixed(2)}</span></div>
+                    </td>
+                    <td class="py-2 px-2 text-right font-semibold">$${available.toFixed(2)}</td>
+                    <td class="py-2 px-2 text-right">
+                        <input type="number" class="tracker-input" data-index="${index}" value="${item.actual > 0 ? item.actual.toFixed(2) : ''}" placeholder="0.00" step="0.01">
+                    </td>
+                    <td class="py-2 px-2 text-right font-medium ${remaining >= 0 ? 'positive' : 'negative'}">$${remaining.toFixed(2)}</td>
+                `;
+                elements.variableTrackerBody.appendChild(row);
+            });
+        }
+
+        function renderSinkingFunds() {
+            const allFunds = [...appState.sinking.map(f => ({...f, type: 'sinking'})), ...appState.goals.map(f => ({...f, type: 'goals'}))];
+            elements.sinkingFundsBody.innerHTML = '';
+            allFunds.forEach((item, index) => {
+                 // Determine original index and type
+                let originalIndex;
+                let type;
+                if (index < appState.sinking.length) {
+                    originalIndex = index;
+                    type = 'sinking';
+                } else {
+                    originalIndex = index - appState.sinking.length;
+                    type = 'goals';
+                }
+
+                const row = document.createElement('tr');
+                row.classList.add('border-b');
+                row.innerHTML = `
+                    <td class="py-2 px-2">${item.category}</td>
+                    <td class="py-2 px-2 text-right text-green-600">+$${item.weekly.toFixed(2)}</td>
+                    <td class="py-2 px-2 text-right font-semibold">$${item.accumulated.toFixed(2)}</td>
+                    <td class="py-2 px-2 text-center">
+                        <button class="btn-withdraw" data-index="${originalIndex}" data-type="${type}">Withdraw</button>
+                    </td>
+                `;
+                elements.sinkingFundsBody.appendChild(row);
+            });
+        }
+        
+        function renderReport() {
+            elements.reportBody.innerHTML = '';
+            appState.transactions.forEach(tx => {
+                const row = document.createElement('tr');
+                row.classList.add('border-b');
+                const amountClass = tx.amount >= 0 ? 'positive' : 'negative';
+                const sign = tx.amount >= 0 ? '+' : '';
+                row.innerHTML = `
+                    <td class="py-2 px-2">${tx.date}</td>
+                    <td class="py-2 px-2 font-medium">${tx.type}</td>
+                    <td class="py-2 px-2 text-gray-600">${tx.details}</td>
+                    <td class="py-2 px-2 text-right font-semibold ${amountClass}">${sign}$${Math.abs(tx.amount).toFixed(2)}</td>
+                `;
+                elements.reportBody.appendChild(row);
+            });
+        }
+        
+        // --- Event Handlers ---
+        elements.incomeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const source = elements.incomeSource.value.trim();
+            const amount = parseFloat(elements.incomeAmount.value);
+            if (source && amount > 0) {
+                appState.currentWeekIncome += amount;
+                addTransaction('Income', source, amount);
+                elements.incomeForm.reset();
+                saveState();
+                render();
+            }
+        });
+
+        elements.variableTrackerBody.addEventListener('input', (e) => {
+            if (e.target.classList.contains('tracker-input')) {
+                const index = e.target.dataset.index;
+                appState.variable[index].actual = parseFloat(e.target.value) || 0;
+                // No saveState here for performance, will save on finalize.
+                render();
+            }
+        });
+
+        elements.finalizeButton.addEventListener('click', () => {
+            if (!confirm("Are you sure? This finalizes the week and prepares for the next.")) return;
+
+            // Log income result
+            const incomeResult = appState.currentWeekIncome - WEEKLY_BUDGET_TARGET;
+            addTransaction('Weekly Summary', 'Income vs Budget', incomeResult);
+
+            // Process variable spending rollovers
+            appState.variable.forEach(item => {
+                const remaining = (item.budget + item.rollover) - item.actual;
+                addTransaction('Rollover', `${item.category} week-end`, remaining - item.rollover);
+                item.rollover = remaining;
+                item.actual = 0;
+            });
+
+            // Add to sinking funds
+            [...appState.sinking, ...appState.goals].forEach(item => item.accumulated += item.weekly);
+            
+            // Reset weekly income
+            appState.currentWeekIncome = 0;
+            
+            saveState();
+            render();
+        });
+        
+        elements.hardResetButton.addEventListener('click', () => {
+            if (confirm("DANGER: This will delete ALL data. Are you sure?")) {
+                localStorage.removeItem('budgetDashboardState_v2');
+                loadState();
+                render();
+            }
+        });
+        
+        // Modal Logic
+        elements.sinkingFundsBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-withdraw')) {
+                const index = e.target.dataset.index;
+                const type = e.target.dataset.type;
+                const categoryName = appState[type][index].category;
+                elements.modalTitle.textContent = `Withdraw from ${categoryName}`;
+                elements.modalCategoryIndex.value = index;
+                elements.modalCategoryType.value = type;
+                elements.modal.classList.remove('hidden');
+            }
+        });
+
+        elements.modalCancel.addEventListener('click', () => elements.modal.classList.add('hidden'));
+
+        elements.modalForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const index = elements.modalCategoryIndex.value;
+            const type = elements.modalCategoryType.value;
+            const amount = parseFloat(elements.modalAmount.value);
+            const note = elements.modalNote.value.trim();
+            const fund = appState[type][index];
+            
+            if (amount > fund.accumulated) {
+                alert('Withdrawal amount cannot exceed total saved.');
+                return;
+            }
+
+            if (amount > 0 && note) {
+                fund.accumulated -= amount;
+                addTransaction('Withdrawal', `${fund.category}: ${note}`, -amount);
+                elements.modal.classList.add('hidden');
+                elements.modalForm.reset();
+                saveState();
+                render();
+            }
+        });
+
+
+        // Initial Load
+        loadState();
+        render();
+    });
+    </script>
+</body>
+</html>
