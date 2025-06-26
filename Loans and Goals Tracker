@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loans & Goals Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        progress {
+            border-radius: 7px; 
+            width: 100%;
+            height: 22px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        progress::-webkit-progress-bar {
+            background-color: #e5e7eb;
+            border-radius: 7px;
+        }
+        progress::-webkit-progress-value {
+            background-color: #2563eb;
+            border-radius: 7px; 
+            transition: width 0.5s ease-in-out;
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none; align-items: center; justify-content: center;
+            z-index: 50;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { display: flex; }
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 20px;
+            background: #ffd300;
+            top: 0;
+            opacity: 0;
+            z-index: 100;
+        }
+        .confetti-piece.blue { background-color: #2563eb; }
+        .confetti-piece.green { background-color: #10b981; }
+        .confetti-piece.red { background-color: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-6">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">Loans & Goals Tracker</h1>
+            <p class="text-lg text-gray-600 mt-2">Visualize your debt-free journey and savings progress.</p>
+        </header>
+
+        <div id="smart-surplus-suggestion" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-md mb-6 shadow-sm"></div>
+        <div id="loan-paid-off-alert" class="hidden bg-green-100 border-l-4 border-green-500 text-green-800 p-4 rounded-md mb-6 shadow-sm"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Debt Payoff Progress Column -->
+            <div class="bg-white p-5 rounded-lg shadow-lg">
+                 <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 class="text-xl font-bold">Debt Payoff Progress</h2>
+                    <button id="add-loan-btn" class="text-sm bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600">Add Loan</button>
+                </div>
+                <div id="loans-container" class="space-y-8"></div>
+            </div>
+
+            <!-- Financial Goals Column -->
+            <div class="bg-white p-5 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 class="text-xl font-bold">Financial Goals</h2>
+                    <button id="add-goal-btn" class="text-sm bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600">Add Goal</button>
+                </div>
+                <div id="goals-container" class="space-y-6"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Unified Modal -->
+    <div id="form-modal" class="modal-overlay">
+         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md m-4">
+             <h3 id="form-modal-title" class="text-lg font-bold mb-4"></h3>
+             <div id="form-modal-body" class="space-y-4"></div>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const loansContainerEl = document.getElementById('loans-container');
+        const goalsContainerEl = document.getElementById('goals-container');
+        const modalEl = document.getElementById('form-modal');
+        const loanPaidOffAlertEl = document.getElementById('loan-paid-off-alert');
+        
+        let appState = {};
+
+        // --- Initial Data ---
+        const initialState = {
+            loans: [
+                { id: 'l1', name: 'Trailer Loan', balance: 15596.39, originalBalance: 15596.39, payment: 259.42, interestRate: 7.5 },
+                { id: 'l2', name: 'Car Loan', balance: 25000.00, originalBalance: 28000.00, payment: 194.96, interestRate: 6.5 },
+                { id: 'l3', name: 'Credit Card', balance: 5689.81, originalBalance: 6000.00, payment: 115.38, interestRate: 19.99 }
+            ],
+            goals: [
+                { id: 'g1', name: 'Build Emergency Fund', target: 5000, current: 1250 },
+                { id: 'g2', name: '2025 Holiday', target: 10000, current: 4000 },
+            ],
+        };
+
+        // --- State Management ---
+        function saveState() {
+            localStorage.setItem('loansAndGoalsState_v1.2', JSON.stringify(appState));
+        }
+
+        function loadState() {
+            const savedState = localStorage.getItem('loansAndGoalsState_v1.2');
+            appState = savedState ? JSON.parse(savedState) : JSON.parse(JSON.stringify(initialState));
+        }
+        
+        // --- Calculation Helpers ---
+        function calculatePayoff(balance, weeklyPayment, annualRate) {
+            if (balance <= 0) return { months: 0, totalInterest: 0 };
+            const monthlyPayment = weeklyPayment * 4.333;
+            const monthlyRate = annualRate / 100 / 12;
+            let totalInterest = 0;
+            let currentBalance = balance;
+            let months = 0;
+
+            if (monthlyPayment <= (balance * monthlyRate)) return { months: Infinity, totalInterest: Infinity };
+            
+            while(currentBalance > 0) {
+                let interestThisMonth = currentBalance * monthlyRate;
+                totalInterest += interestThisMonth;
+                currentBalance -= (monthlyPayment - interestThisMonth);
+                months++;
+                if (months > 1200) return { months: Infinity, totalInterest: Infinity }; // Safety break
+            }
+            return { months, totalInterest };
+        }
+
+        // --- Main Render Function ---
+        function render() {
+            renderLoans();
+            renderGoals();
+        }
+        
+        function renderLoans() {
+            let html = '';
+            appState.loans.forEach(loan => {
+                const { months } = calculatePayoff(loan.balance, loan.payment, loan.interestRate);
+                const payoffDate = new Date();
+                if(isFinite(months)) payoffDate.setMonth(payoffDate.getMonth() + months);
+                const progress = loan.balance > 0 && loan.originalBalance > 0 ? (1 - (loan.balance / loan.originalBalance)) * 100 : 100;
+                
+                html += `
+                <div class="p-4 border rounded-lg ${loan.balance <= 0 ? 'bg-green-50 border-green-200' : ''}">
+                    <div class="flex justify-between items-baseline">
+                        <span class="font-bold text-lg">${loan.name}</span>
+                        <button class="text-xs text-blue-600 hover:underline" data-edit-loan-id="${loan.id}">Edit</button>
+                    </div>
+                    <div class="flex justify-between items-baseline mt-2">
+                        <span class="font-semibold text-lg">$${loan.balance.toFixed(2)}</span>
+                        <span class="text-xs text-gray-500">of $${loan.originalBalance.toFixed(2)}</span>
+                    </div>
+                    <progress class="w-full mt-1" value="${progress}" max="100"></progress>
+                    <div class="text-xs text-gray-600 flex justify-between mt-1">
+                        <span>Est. Payoff: <strong>${isFinite(months) ? payoffDate.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }) : 'Never'}</strong></span>
+                        <span>Payment: <strong>$${loan.payment.toFixed(2)}/wk</strong></span>
+                    </div>
+                    ${loan.balance > 0 ? `
+                    <div class="mt-3 text-sm bg-gray-50 p-3 rounded-lg">
+                        <label class="font-semibold">"What If?" Calculator</label>
+                        <div class="flex items-center space-x-2 mt-1">
+                             <input type="number" class="w-24 p-1 border rounded text-right" data-loan-id="${loan.id}" placeholder="50.00">
+                             <button class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700" data-calc-id="${loan.id}">See Impact</button>
+                        </div>
+                        <div class="text-xs mt-2 text-blue-800 font-semibold" id="impact-${loan.id}"></div>
+                    </div>` : ''}
+                </div>`;
+            });
+            loansContainerEl.innerHTML = html;
+        }
+        
+        function renderGoals() {
+            let html = '';
+            appState.goals.forEach(goal => {
+                const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+                html += `
+                <div class="p-4 border rounded-lg ${progress >= 100 ? 'bg-green-50 border-green-200' : ''}">
+                     <div class="flex justify-between items-baseline">
+                        <span class="font-bold">${goal.name}</span>
+                         <button class="text-xs text-blue-600 hover:underline" data-edit-goal-id="${goal.id}">Edit</button>
+                    </div>
+                    <div class="flex justify-between items-baseline mt-2">
+                        <span class="font-semibold">$${goal.current.toFixed(2)}</span>
+                         <span class="text-xs text-gray-500">of $${goal.target.toFixed(2)}</span>
+                    </div>
+                    <progress class="w-full mt-1" value="${progress}" max="100"></progress>
+                    <div class="text-right mt-2">
+                        <button class="text-xs bg-green-500 text-white px-3 py-1 rounded-full hover:bg-green-600" data-add-funds-id="${goal.id}">Add Funds</button>
+                    </div>
+                </div>`;
+            });
+            goalsContainerEl.innerHTML = html;
+        }
+        
+        // --- Gamification ---
+        function launchConfetti() {
+            const container = document.body;
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                const colors = ['blue', 'green', 'red', ''];
+                confetti.className = 'confetti-piece ' + colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+                confetti.style.animation = `fall ${1 + Math.random()}s linear ${Math.random() * 2}s forwards`;
+                container.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 3000);
+            }
+            if(!document.getElementById('confetti-styles')) {
+                const style = document.createElement('style');
+                style.id = 'confetti-styles';
+                style.innerHTML = `@keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 1; } }`;
+                document.head.appendChild(style);
+            }
+        }
+
+        // --- Modal & Form Logic ---
+        function showModal(content) {
+            document.getElementById('form-modal-title').innerHTML = content.title;
+            document.getElementById('form-modal-body').innerHTML = content.body;
+            modalEl.classList.add('active');
+        }
+
+        function closeModal() {
+            modalEl.classList.remove('active');
+        }
+        
+        function handleFormSubmit(e) {
+             e.preventDefault();
+             const form = e.target;
+             const type = form.dataset.type;
+             const id = form.dataset.id;
+             
+             if(type === 'loan') {
+                const loan = id ? appState.loans.find(l => l.id === id) : { id: 'l' + Date.now() };
+                const oldPayment = loan.payment || 0;
+                
+                loan.name = form.querySelector('#form-name').value;
+                loan.balance = parseFloat(form.querySelector('#form-balance').value);
+                loan.originalBalance = parseFloat(form.querySelector('#form-originalBalance').value);
+                loan.payment = parseFloat(form.querySelector('#form-payment').value);
+                loan.interestRate = parseFloat(form.querySelector('#form-interestRate').value);
+                
+                if(!id) appState.loans.push(loan);
+
+                if(loan.balance <= 0 && oldPayment > 0) {
+                     loanPaidOffAlertEl.innerHTML = `🎉 <strong>Loan Paid Off!</strong> You've freed up <strong>$${oldPayment.toFixed(2)}</strong> in your weekly budget. Re-allocate it to another goal!`;
+                     loanPaidOffAlertEl.classList.remove('hidden');
+                     launchConfetti();
+                }
+
+             } else if(type === 'goal') {
+                const goal = id ? appState.goals.find(g => g.id === id) : { id: 'g' + Date.now() };
+                goal.name = form.querySelector('#form-name').value;
+                goal.target = parseFloat(form.querySelector('#form-target').value);
+                goal.current = parseFloat(form.querySelector('#form-current').value);
+                if(!id) appState.goals.push(goal);
+             } else if (type === 'addFunds') {
+                const goal = appState.goals.find(g => g.id === id);
+                goal.current += parseFloat(form.querySelector('#form-amount').value);
+                launchConfetti();
+             }
+
+             saveState();
+             render();
+             closeModal();
+        }
+
+        // --- Event Delegation ---
+        document.body.addEventListener('click', e => {
+            const editLoanId = e.target.dataset.editLoanId;
+            if (editLoanId) {
+                const loan = appState.loans.find(l => l.id === editLoanId);
+                showModal({ title: `Edit ${loan.name}`, body: createLoanForm(loan) });
+            }
+            
+            const editGoalId = e.target.dataset.editGoalId;
+            if (editGoalId) {
+                const goal = appState.goals.find(g => g.id === editGoalId);
+                showModal({ title: `Edit ${goal.name}`, body: createGoalForm(goal) });
+            }
+
+            const addFundsId = e.target.dataset.addFundsId;
+            if (addFundsId) {
+                 const goal = appState.goals.find(g => g.id === addFundsId);
+                 showModal({
+                    title: `Add to ${goal.name}`,
+                    body: `<form data-type="addFunds" data-id="${goal.id}" class="space-y-4">
+                        <div><label>Amount to Add</label><input type="number" id="form-amount" class="w-full p-2 border rounded" required step="0.01"></div>
+                        <div class="flex justify-end pt-4"><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Add</button></div>
+                    </form>`
+                 });
+            }
+
+            const calcId = e.target.dataset.calcId;
+            if (calcId) {
+                const loan = appState.loans.find(l => l.id === calcId);
+                const extraPayment = parseFloat(document.querySelector(`input[data-loan-id="${calcId}"]`).value) || 0;
+                const impactEl = document.getElementById(`impact-${calcId}`);
+                
+                const { months: origMonths, totalInterest: origInterest } = calculatePayoff(loan.balance, loan.payment, loan.interestRate);
+                const { months: newMonths, totalInterest: newInterest } = calculatePayoff(loan.balance, loan.payment + extraPayment, loan.interestRate);
+                
+                const monthsSaved = Math.floor(origMonths - newMonths);
+                const interestSaved = origInterest - newInterest;
+
+                if (monthsSaved > 0) {
+                     impactEl.innerHTML = `🚀 You'd pay it off <strong>${monthsSaved} months sooner</strong> and save approx. <strong>$${interestSaved.toFixed(0)}</strong> in interest!`;
+                } else {
+                     impactEl.textContent = 'Add more to see the impact!';
+                }
+            }
+             if (e.target.id === 'add-loan-btn') showModal({ title: 'Add New Loan', body: createLoanForm() });
+             if (e.target.id === 'add-goal-btn') showModal({ title: 'Add New Goal', body: createGoalForm() });
+
+             if (e.target.dataset.action === 'delete') {
+                 const {type, id} = e.target.dataset;
+                 if (confirm(`Are you sure you want to delete this ${type}?`)) {
+                     appState[type] = appState[type].filter(item => item.id !== id);
+                     saveState();
+                     render();
+                     closeModal();
+                 }
+             }
+        });
+
+        document.getElementById('form-modal').addEventListener('submit', handleFormSubmit);
+        document.getElementById('form-modal').addEventListener('click', e => {
+            if (e.target.matches('.modal-cancel-btn') || e.target === modalEl) closeModal();
+        });
+        
+        // --- Form Creation Helpers ---
+        function createLoanForm(loan = {}) {
+            return `<form data-type="loan" data-id="${loan.id || ''}">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2"><label>Name</label><input id="form-name" class="w-full p-2 border rounded" value="${loan.name || ''}" required></div>
+                    <div><label>Current Balance ($)</label><input id="form-balance" type="number" class="w-full p-2 border rounded" value="${loan.balance || 0}" required step="0.01"></div>
+                    <div><label>Original Balance ($)</label><input id="form-originalBalance" type="number" class="w-full p-2 border rounded" value="${loan.originalBalance || 0}" required step="0.01"></div>
+                    <div><label>Weekly Payment ($)</label><input id="form-payment" type="number" class="w-full p-2 border rounded" value="${loan.payment || 0}" required step="0.01"></div>
+                    <div><label>Interest Rate (%)</label><input id="form-interestRate" type="number" class="w-full p-2 border rounded" value="${loan.interestRate || 0}" required step="0.01"></div>
+                </div>
+                <div class="flex justify-between pt-4 mt-4 border-t">
+                    <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" data-action="delete" data-type="loans" data-id="${loan.id || ''}">Delete</button>
+                    <div class="space-x-2">
+                        <button type="button" class="bg-gray-300 px-4 py-2 rounded modal-cancel-btn">Cancel</button>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+                    </div>
+                </div>
+            </form>`;
+        }
+        function createGoalForm(goal = {}) {
+            return `<form data-type="goal" data-id="${goal.id || ''}">
+                 <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2"><label>Name</label><input id="form-name" class="w-full p-2 border rounded" value="${goal.name || ''}" required></div>
+                    <div><label>Target Amount ($)</label><input id="form-target" type="number" class="w-full p-2 border rounded" value="${goal.target || 0}" required step="0.01"></div>
+                    <div><label>Current Amount ($)</label><input id="form-current" type="number" class="w-full p-2 border rounded" value="${goal.current || 0}" required step="0.01"></div>
+                 </div>
+                 <div class="flex justify-between pt-4 mt-4 border-t">
+                    <button type="button" class="bg-red-500 text-white px-4 py-2 rounded" data-action="delete" data-type="goals" data-id="${goal.id || ''}">Delete</button>
+                    <div class="space-x-2">
+                        <button type="button" class="bg-gray-300 px-4 py-2 rounded modal-cancel-btn">Cancel</button>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+                    </div>
+                 </div>
+            </form>`;
+        }
+
+        // --- Initial Load ---
+        loadState();
+        render();
+    });
+    </script>
+</body>
+</html>
