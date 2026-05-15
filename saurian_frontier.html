@@ -1,0 +1,1539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#0a1a14" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Saurian Frontier — Stage 1</title>
+<style>
+  :root {
+    --hud-fg:#e8fff2;
+    --hud-bg:rgba(8,18,14,0.55);
+    --accent:#7cf2c8;
+    --health:#ff5a6e;
+    --stamina:#f5d36a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    width:100%;height:100%;overflow:hidden;background:#070e0c;color:var(--hud-fg);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    user-select:none;-webkit-user-select:none;touch-action:none;overscroll-behavior:none;
+  }
+  #app{position:fixed;inset:0;}
+  canvas{display:block;width:100%;height:100%;}
+
+  /* Boot / loading */
+  #boot{
+    position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at center,#163a2a 0%,#08130e 80%);
+    z-index:1000;transition:opacity .8s ease;
+  }
+  #boot h1{
+    font-size:clamp(28px,7vw,56px);letter-spacing:.18em;color:var(--accent);
+    text-shadow:0 0 24px rgba(124,242,200,.45);font-weight:800;
+  }
+  #boot .sub{margin-top:.4em;color:#9ad4be;font-size:clamp(11px,2.4vw,16px);letter-spacing:.3em;}
+  #boot .bar{margin-top:2em;width:60%;max-width:360px;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;}
+  #boot .fill{height:100%;width:0%;background:linear-gradient(90deg,#7cf2c8,#3aa377);transition:width .2s ease;}
+  #boot .tag{margin-top:1.4em;font-size:11px;letter-spacing:.4em;opacity:.55;}
+  #boot button{
+    margin-top:2em;padding:.9em 2em;border:1px solid var(--accent);background:rgba(124,242,200,.08);
+    color:var(--accent);font-size:14px;letter-spacing:.3em;border-radius:99px;cursor:pointer;
+    text-transform:uppercase;font-weight:600;display:none;
+  }
+  #boot button:active{background:rgba(124,242,200,.2);}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:10;}
+  .stat-stack{
+    position:absolute;top:env(safe-area-inset-top,12px);left:12px;
+    display:flex;flex-direction:column;gap:6px;padding:10px 12px;
+    background:var(--hud-bg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border-radius:14px;border:1px solid rgba(255,255,255,.08);min-width:160px;
+  }
+  .meter{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;position:relative;}
+  .meter::before{
+    content:'';position:absolute;inset:0;width:var(--v,100%);
+    background:linear-gradient(90deg,var(--c1),var(--c2));
+    box-shadow:0 0 12px var(--c2);transition:width .15s ease;
+  }
+  .meter.hp{--c1:#ff8aa0;--c2:#ff5a6e;}
+  .meter.sp{--c1:#fff0a8;--c2:#f5d36a;}
+  .label{font-size:9px;letter-spacing:.25em;text-transform:uppercase;opacity:.7;}
+
+  #clock{
+    position:absolute;top:env(safe-area-inset-top,12px);right:12px;
+    padding:8px 14px;background:var(--hud-bg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border-radius:14px;border:1px solid rgba(255,255,255,.08);
+    display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.15em;
+  }
+  #clock .sun{width:10px;height:10px;border-radius:99px;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+
+  #biome-banner{
+    position:absolute;top:60px;left:50%;transform:translate(-50%,-20px);
+    padding:6px 18px;border-radius:99px;background:var(--hud-bg);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.1);font-size:11px;letter-spacing:.4em;text-transform:uppercase;
+    opacity:0;transition:opacity .5s ease,transform .5s ease;
+  }
+  #biome-banner.show{opacity:1;transform:translate(-50%,0);}
+
+  /* Minimap */
+  #minimap{
+    position:absolute;bottom:max(env(safe-area-inset-bottom,12px),12px);right:12px;
+    width:120px;height:120px;border-radius:50%;
+    background:var(--hud-bg);border:2px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(8px);overflow:hidden;
+  }
+  #minimap canvas{position:absolute;inset:0;}
+
+  /* Touch controls */
+  #touch{position:fixed;inset:0;z-index:20;pointer-events:none;}
+  #stick-zone{position:absolute;left:0;bottom:0;width:50%;height:60%;pointer-events:auto;}
+  #cam-zone{position:absolute;right:0;top:0;width:55%;height:60%;pointer-events:auto;}
+  #stick{
+    position:absolute;width:120px;height:120px;border-radius:50%;
+    background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.18);
+    display:none;
+  }
+  #stick .nub{
+    position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;
+    background:rgba(124,242,200,.5);box-shadow:0 0 16px rgba(124,242,200,.6);
+    transform:translate(-50%,-50%);transition:none;
+  }
+  #buttons{
+    position:absolute;right:12px;bottom:max(env(safe-area-inset-bottom,16px),16px);
+    display:grid;grid-template-columns:repeat(2,72px);grid-template-rows:repeat(2,72px);
+    gap:10px;pointer-events:auto;
+  }
+  .btn{
+    width:72px;height:72px;border-radius:50%;
+    background:var(--hud-bg);border:1.5px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;letter-spacing:.2em;color:var(--hud-fg);
+    text-transform:uppercase;font-weight:600;
+  }
+  .btn:active,.btn.held{background:rgba(124,242,200,.25);border-color:var(--accent);transform:scale(.94);}
+  .btn .glyph{font-size:24px;line-height:1;margin-bottom:2px;}
+  .btn-jump{grid-column:2;grid-row:1;}
+  .btn-sprint{grid-column:1;grid-row:1;}
+  .btn-action{grid-column:2;grid-row:2;}
+  .btn-scan{grid-column:1;grid-row:2;}
+
+  /* Hide touch on desktop */
+  body.no-touch #touch{display:none;}
+
+  #help{
+    position:absolute;bottom:max(env(safe-area-inset-bottom,12px),12px);left:12px;
+    padding:8px 12px;background:var(--hud-bg);border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;font-size:10px;letter-spacing:.1em;opacity:.55;max-width:240px;line-height:1.6;
+  }
+
+  .hidden{display:none!important;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- Boot screen -->
+<div id="boot">
+  <h1>SAURIAN FRONTIER</h1>
+  <div class="sub">Stage I · The Wilds</div>
+  <div class="bar"><div class="fill" id="boot-fill"></div></div>
+  <div class="tag" id="boot-status">awakening the prehistoric...</div>
+  <button id="boot-start">Enter the Wilds</button>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="stat-stack">
+    <div class="label">Vitality</div>
+    <div class="meter hp"><i style="--v:100%"></i></div>
+    <div class="label" style="margin-top:4px;">Stamina</div>
+    <div class="meter sp"><i style="--v:100%"></i></div>
+  </div>
+  <div id="clock"><div class="sun"></div><span id="clock-text">Dawn · Day 1</span></div>
+  <div id="biome-banner">Greenleaf Plains</div>
+  <div id="minimap"><canvas id="minimap-canvas" width="240" height="240"></canvas></div>
+  <div id="help">
+    <b style="color:var(--accent);letter-spacing:.2em;">Stage I</b><br/>
+    Move · WASD / left stick<br/>
+    Camera · mouse / right swipe<br/>
+    Sprint · Shift · Jump · Space
+  </div>
+</div>
+
+<!-- Touch overlay -->
+<div id="touch">
+  <div id="stick-zone"><div id="stick"><div class="nub"></div></div></div>
+  <div id="cam-zone"></div>
+  <div id="buttons">
+    <div class="btn btn-sprint" data-act="sprint"><div><div class="glyph">»</div>RUN</div></div>
+    <div class="btn btn-jump" data-act="jump"><div><div class="glyph">▲</div>JUMP</div></div>
+    <div class="btn btn-scan" data-act="scan"><div><div class="glyph">◎</div>SCAN</div></div>
+    <div class="btn btn-action" data-act="action"><div><div class="glyph">✦</div>ACT</div></div>
+  </div>
+</div>
+
+<!-- three.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+/* =============================================================================
+   SAURIAN FRONTIER — STAGE I
+   Foundation: world, camera, player controller, basic dino AI.
+   Single-file, no build, runs on Samsung Internet + Chrome Android.
+   Architecture:
+     - GAME : top-level orchestrator
+     - WORLD : terrain, biomes, foliage, sky, day/night
+     - PLAYER : capsule character, stats, movement
+     - CAMERA : smoothed third-person follow
+     - DINO + DINO_AI : entities with state-machine behavior
+     - INPUT : unified keyboard/touch/gamepad
+     - HUD : DOM overlay updates
+     - SAVE : localStorage persistence (basic in Stage 1)
+   ============================================================================= */
+
+(() => {
+'use strict';
+
+/* ---------- 0. Globals & helpers --------------------------------------- */
+
+const THREE = window.THREE;
+const TAU = Math.PI * 2;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const rand = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/* Seeded RNG for deterministic world layout. */
+function mulberry32(seed){
+  return function(){
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* 2D value-noise + fractal Brownian motion for terrain. Fast and good enough. */
+function makeNoise2D(seed){
+  const rng = mulberry32(seed);
+  const perm = new Uint8Array(512);
+  for (let i = 0; i < 256; i++) perm[i] = i;
+  for (let i = 255; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [perm[i], perm[j]] = [perm[j], perm[i]];
+  }
+  for (let i = 0; i < 256; i++) perm[i + 256] = perm[i];
+  const grad = (h, x, y) => {
+    switch (h & 3){
+      case 0: return  x + y;
+      case 1: return -x + y;
+      case 2: return  x - y;
+      default:return -x - y;
+    }
+  };
+  const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+  return (x, y) => {
+    const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+    const xf = x - Math.floor(x), yf = y - Math.floor(y);
+    const u = fade(xf), v = fade(yf);
+    const aa = perm[perm[xi]     + yi];
+    const ab = perm[perm[xi]     + yi + 1];
+    const ba = perm[perm[xi + 1] + yi];
+    const bb = perm[perm[xi + 1] + yi + 1];
+    const x1 = lerp(grad(aa, xf, yf),     grad(ba, xf - 1, yf),     u);
+    const x2 = lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u);
+    return lerp(x1, x2, v); // ~[-1,1]
+  };
+}
+function fbm(noise, x, y, oct = 4, lac = 2, gain = 0.5){
+  let sum = 0, amp = 1, freq = 1, norm = 0;
+  for (let i = 0; i < oct; i++){
+    sum += amp * noise(x * freq, y * freq);
+    norm += amp;
+    amp *= gain;
+    freq *= lac;
+  }
+  return sum / norm;
+}
+
+/* ---------- 1. World constants & biome definitions --------------------- */
+
+const WORLD = {
+  size: 800,       // world half-extent; full map = 1600x1600 units
+  segs: 192,       // terrain mesh resolution
+  amp: 70,         // max terrain height
+  seed: 1337,
+  dayLength: 8 * 60,     // 8 minute real-time day
+  fogNear: 80, fogFar: 700,
+};
+
+/* 6 biomes laid out by angle around the origin. Center is Greenleaf Plains. */
+const BIOMES = [
+  { id:'plains',  name:'Greenleaf Plains',    angle:null,     color:0x6dbb6c, accent:0x3f8e54, hillAmp:0.6,  treeDensity:0.9, rockDensity:0.3, fogColor:0xb6e6c4, grass:0x5fae5b },
+  { id:'volcano', name:'Ember Volcano',       angle: 0,       color:0x6e2722, accent:0xb53b1a, hillAmp:1.4,  treeDensity:0.05, rockDensity:1.2, fogColor:0xff8b54, grass:0x7a2417 },
+  { id:'tundra',  name:'Frostspine Tundra',   angle: Math.PI/3,    color:0xc8e1ec, accent:0x7fb7d4, hillAmp:1.2,  treeDensity:0.2, rockDensity:0.7, fogColor:0xd2eaff, grass:0xeaf6ff },
+  { id:'bayou',   name:'Sunken Bayou',        angle:(2*Math.PI)/3, color:0x3e6b4a, accent:0x205d3e, hillAmp:0.3,  treeDensity:1.3, rockDensity:0.2, fogColor:0x82b893, grass:0x376b4a },
+  { id:'crystal', name:'Crystal Highlands',   angle: Math.PI,      color:0x6c5dba, accent:0xb19df2, hillAmp:1.8,  treeDensity:0.3, rockDensity:1.0, fogColor:0xc7b7ff, grass:0x6c5dba },
+  { id:'desert',  name:'Skyfall Desert',      angle:(4*Math.PI)/3, color:0xe7c98a, accent:0xb88c4d, hillAmp:0.8,  treeDensity:0.05, rockDensity:0.6, fogColor:0xffdfa6, grass:0xd2ad6c },
+  // 6th slot — we use the 6 directions, but the array index 0 is plains as default core
+];
+
+/* Biome at world (x,z): outer ring split into 5 wedges, plains in core radius. */
+function biomeAt(x, z){
+  const r = Math.hypot(x, z);
+  if (r < WORLD.size * 0.28) return BIOMES[0]; // plains core
+  const a = (Math.atan2(z, x) + TAU) % TAU;
+  // wedges of 2π/5 starting at 0 → volcano, tundra, bayou, crystal, desert
+  const wedge = Math.floor(a / (TAU / 5));
+  return BIOMES[1 + wedge];
+}
+
+/* Mix biomes near borders for smooth visual transitions. */
+function biomeBlend(x, z){
+  const r = Math.hypot(x, z);
+  const inner = WORLD.size * 0.28;
+  const outer = WORLD.size * 0.40;
+  const a = (Math.atan2(z, x) + TAU) % TAU;
+  const wedgeF = a / (TAU / 5);
+  const wedge = Math.floor(wedgeF) % 5;
+  const next = (wedge + 1) % 5;
+  const tWedge = wedgeF - Math.floor(wedgeF);
+  const blendW = smoothstep(0.85, 1, tWedge);
+  const tCore = smoothstep(inner, outer, r);
+  const core = BIOMES[0];
+  const a1 = BIOMES[1 + wedge];
+  const a2 = BIOMES[1 + next];
+  // returns array of {biome, weight}
+  return [
+    { biome:core, w:1 - tCore },
+    { biome:a1,   w: tCore * (1 - blendW) },
+    { biome:a2,   w: tCore * blendW },
+  ];
+}
+
+/* ---------- 2. Three.js setup ------------------------------------------ */
+
+const app = document.getElementById('app');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xb6e6c4);
+scene.fog = new THREE.Fog(0xb6e6c4, WORLD.fogNear, WORLD.fogFar);
+
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.5, 2000);
+camera.position.set(0, 30, 30);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: window.devicePixelRatio < 2,
+  powerPreference: 'high-performance',
+  alpha: false,
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+app.appendChild(renderer.domElement);
+
+/* Toon gradient texture — three-step cel shading for that painterly look. */
+function makeToonGradient(steps = 4){
+  const c = document.createElement('canvas');
+  c.width = steps; c.height = 1;
+  const g = c.getContext('2d');
+  for (let i = 0; i < steps; i++){
+    const v = Math.floor(((i + 1) / steps) * 255);
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.fillRect(i, 0, 1, 1);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  return tex;
+}
+const TOON_TEX = makeToonGradient(5);
+
+function toonMat(color, opts = {}){
+  return new THREE.MeshToonMaterial({
+    color,
+    gradientMap: TOON_TEX,
+    ...opts,
+  });
+}
+
+/* ---------- 3. Sky + lighting + day/night ------------------------------ */
+
+const SKY = {
+  // Sky shader — vertical gradient that we tint at runtime via uniforms.
+  uniforms: {
+    uTop:    { value: new THREE.Color(0x6cb6ff) },
+    uBottom: { value: new THREE.Color(0xd6f0e2) },
+    uOffset: { value: 0.4 },
+  },
+};
+const skyGeo = new THREE.SphereGeometry(1200, 24, 12);
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  depthWrite: false,
+  uniforms: SKY.uniforms,
+  vertexShader: `
+    varying vec3 vWorldPos;
+    void main(){
+      vWorldPos = (modelMatrix * vec4(position,1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }`,
+  fragmentShader: `
+    uniform vec3 uTop;
+    uniform vec3 uBottom;
+    uniform float uOffset;
+    varying vec3 vWorldPos;
+    void main(){
+      float h = normalize(vWorldPos).y;
+      float t = smoothstep(-uOffset, 1.0, h);
+      vec3 col = mix(uBottom, uTop, t);
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+});
+const sky = new THREE.Mesh(skyGeo, skyMat);
+sky.renderOrder = -100;
+scene.add(sky);
+
+/* Sun + moon lights. Sun rotates around the world to drive day/night. */
+const sunLight = new THREE.DirectionalLight(0xfff0c8, 1.1);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(1024, 1024);
+sunLight.shadow.camera.left = -120; sunLight.shadow.camera.right = 120;
+sunLight.shadow.camera.top = 120;   sunLight.shadow.camera.bottom = -120;
+sunLight.shadow.camera.near = 1;    sunLight.shadow.camera.far = 500;
+sunLight.shadow.bias = -0.0005;
+scene.add(sunLight);
+scene.add(sunLight.target);
+
+const ambient = new THREE.HemisphereLight(0xb6e6ff, 0x223322, 0.55);
+scene.add(ambient);
+
+/* Visible sun disc. */
+const sunDisc = new THREE.Mesh(
+  new THREE.CircleGeometry(40, 24),
+  new THREE.MeshBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.95, depthWrite: false })
+);
+sunDisc.renderOrder = -50;
+scene.add(sunDisc);
+
+/* ---------- 4. Terrain ------------------------------------------------- */
+
+const noise = makeNoise2D(WORLD.seed);
+
+/* Heightfield height query — used by terrain mesh, player, and dino grounding. */
+function heightAt(x, z){
+  // Sample biome influences and combine height profiles.
+  const mix = biomeBlend(x, z);
+  let baseAmp = 0;
+  for (const m of mix) baseAmp += m.biome.hillAmp * m.w;
+  // base noise (large-scale rolling)
+  const big = fbm(noise, x * 0.0014, z * 0.0014, 4) * 0.7;
+  const small = fbm(noise, x * 0.012, z * 0.012, 3) * 0.25;
+  let h = (big + small) * WORLD.amp * baseAmp;
+  // shape: bowl-ish near center to keep plains low; rims rise toward edge
+  const r = Math.hypot(x, z) / WORLD.size;
+  h += Math.pow(r, 2.2) * 25;
+  // volcano cone: dome where biome=volcano
+  for (const m of mix){
+    if (m.biome.id === 'volcano' && m.w > 0.3){
+      const dx = x - Math.cos(BIOMES[1].angle) * WORLD.size * 0.66;
+      const dz = z - Math.sin(BIOMES[1].angle) * WORLD.size * 0.66;
+      const d = Math.hypot(dx, dz);
+      h += Math.max(0, 120 - d * 0.7) * m.w;
+    }
+    if (m.biome.id === 'crystal' && m.w > 0.3){
+      h += fbm(noise, x * 0.03, z * 0.03, 3) * 50 * m.w;
+    }
+  }
+  return h;
+}
+
+function biomeColorAt(x, z){
+  const mix = biomeBlend(x, z);
+  const col = new THREE.Color(0, 0, 0);
+  const tmp = new THREE.Color();
+  for (const m of mix){
+    tmp.setHex(m.biome.color);
+    col.r += tmp.r * m.w;
+    col.g += tmp.g * m.w;
+    col.b += tmp.b * m.w;
+  }
+  return col;
+}
+
+const terrainGeo = new THREE.PlaneGeometry(WORLD.size * 2, WORLD.size * 2, WORLD.segs, WORLD.segs);
+terrainGeo.rotateX(-Math.PI / 2);
+{
+  const pos = terrainGeo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++){
+    const x = pos.getX(i), z = pos.getZ(i);
+    const h = heightAt(x, z);
+    pos.setY(i, h);
+    biomeColorAt(x, z).getRGB(c);
+    // slope darkening for variation
+    const slope = clamp(Math.abs(heightAt(x + 4, z) - heightAt(x - 4, z)) / 8, 0, 1);
+    c.r *= 1 - slope * 0.4;
+    c.g *= 1 - slope * 0.4;
+    c.b *= 1 - slope * 0.4;
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  terrainGeo.computeVertexNormals();
+}
+const terrain = new THREE.Mesh(
+  terrainGeo,
+  toonMat(0xffffff, { vertexColors: true, flatShading: true })
+);
+terrain.receiveShadow = true;
+scene.add(terrain);
+
+/* Water plane at y=0 for bayou + low areas. */
+const waterMat = new THREE.MeshToonMaterial({
+  color: 0x4f9ad6,
+  gradientMap: TOON_TEX,
+  transparent: true,
+  opacity: 0.85,
+});
+const water = new THREE.Mesh(
+  new THREE.PlaneGeometry(WORLD.size * 2.4, WORLD.size * 2.4),
+  waterMat
+);
+water.rotation.x = -Math.PI / 2;
+water.position.y = -4;
+scene.add(water);
+
+/* ---------- 5. Foliage (instanced) ------------------------------------ */
+
+/* Stylized tree: trunk (cylinder) + leaf cone, kept as separate geos so each
+   gets its own InstancedMesh with its own toon material. */
+const TRUNK_GEO = new THREE.CylinderGeometry(0.4, 0.7, 3.5, 6);
+TRUNK_GEO.translate(0, 1.75, 0);
+const LEAF_GEO = new THREE.ConeGeometry(2.4, 5, 7);
+LEAF_GEO.translate(0, 5.5, 0);
+const trunkMat = toonMat(0x5b3a25, { flatShading: true });
+
+function spawnFoliage(){
+  const total = 1400;
+  const rng = mulberry32(WORLD.seed + 7);
+  // Buckets per biome accent (leaf color)
+  const buckets = {};
+  let attempts = 0;
+  while (Object.values(buckets).reduce((a, b) => a + b.length, 0) < total && attempts < total * 6){
+    attempts++;
+    const x = (rng() - 0.5) * WORLD.size * 2 * 0.96;
+    const z = (rng() - 0.5) * WORLD.size * 2 * 0.96;
+    const b = biomeAt(x, z);
+    if (rng() > b.treeDensity * 0.6) continue;
+    const y = heightAt(x, z);
+    if (y < -1) continue;
+    const key = b.accent.toString(16);
+    (buckets[key] = buckets[key] || []).push({ x, y, z, scale: 0.7 + rng() * 1.1, rot: rng() * TAU, color: b.accent });
+  }
+  const dummy = new THREE.Object3D();
+  for (const key in buckets){
+    const items = buckets[key];
+    const trunkIM = new THREE.InstancedMesh(TRUNK_GEO, trunkMat, items.length);
+    const leafIM  = new THREE.InstancedMesh(LEAF_GEO, toonMat(items[0].color, { flatShading: true }), items.length);
+    for (let i = 0; i < items.length; i++){
+      const it = items[i];
+      dummy.position.set(it.x, it.y, it.z);
+      dummy.rotation.set(0, it.rot, 0);
+      dummy.scale.setScalar(it.scale);
+      dummy.updateMatrix();
+      trunkIM.setMatrixAt(i, dummy.matrix);
+      leafIM.setMatrixAt(i, dummy.matrix);
+    }
+    trunkIM.castShadow = true;
+    leafIM.castShadow = true;
+    scene.add(trunkIM);
+    scene.add(leafIM);
+  }
+}
+spawnFoliage();
+
+/* Rocks: scattered boulders, instanced. */
+function spawnRocks(){
+  const geo = new THREE.DodecahedronGeometry(1.4, 0);
+  geo.scale(1, 0.7, 1);
+  const mat = toonMat(0x7d7d7d, { flatShading: true });
+  const total = 500;
+  const rng = mulberry32(WORLD.seed + 11);
+  const im = new THREE.InstancedMesh(geo, mat, total);
+  const dummy = new THREE.Object3D();
+  let n = 0;
+  while (n < total){
+    const x = (rng() - 0.5) * WORLD.size * 2 * 0.97;
+    const z = (rng() - 0.5) * WORLD.size * 2 * 0.97;
+    const b = biomeAt(x, z);
+    if (rng() > b.rockDensity * 0.4) continue;
+    const h = heightAt(x, z);
+    if (h < -2) continue;
+    dummy.position.set(x, h - 0.2, z);
+    dummy.rotation.set(rng() * TAU, rng() * TAU, rng() * TAU);
+    dummy.scale.setScalar(0.6 + rng() * 2.2);
+    dummy.updateMatrix();
+    im.setMatrixAt(n++, dummy.matrix);
+  }
+  im.count = n;
+  im.castShadow = true; im.receiveShadow = true;
+  scene.add(im);
+}
+spawnRocks();
+
+/* Grass patches — billboard-ish bushes for ambience. */
+function spawnGrass(){
+  const geo = new THREE.PlaneGeometry(1.6, 1.2);
+  geo.translate(0, 0.6, 0);
+  const mat = toonMat(0x86c87a, { transparent: false, side: THREE.DoubleSide, flatShading: true });
+  const total = 1200;
+  const rng = mulberry32(WORLD.seed + 23);
+  const im = new THREE.InstancedMesh(geo, mat, total);
+  const dummy = new THREE.Object3D();
+  let n = 0;
+  while (n < total){
+    const x = (rng() - 0.5) * WORLD.size * 2 * 0.95;
+    const z = (rng() - 0.5) * WORLD.size * 2 * 0.95;
+    const b = biomeAt(x, z);
+    if (b.id === 'desert' || b.id === 'volcano') continue;
+    const h = heightAt(x, z);
+    if (h < 0) continue;
+    dummy.position.set(x, h, z);
+    dummy.rotation.set(0, rng() * TAU, 0);
+    dummy.scale.setScalar(0.5 + rng() * 1.4);
+    dummy.updateMatrix();
+    im.setMatrixAt(n++, dummy.matrix);
+  }
+  im.count = n;
+  scene.add(im);
+}
+spawnGrass();
+
+/* ---------- 6. Player -------------------------------------------------- */
+
+const PLAYER = {
+  pos: new THREE.Vector3(0, 0, 0),
+  vel: new THREE.Vector3(),
+  yaw: 0,
+  pitch: 0,
+  height: 1.8,
+  radius: 0.5,
+  onGround: false,
+  walkSpeed: 9,
+  sprintSpeed: 16,
+  jumpV: 13,
+  gravity: -32,
+  hp: 100, hpMax: 100,
+  sp: 100, spMax: 100,
+  sprinting: false,
+};
+
+/* Build a simple low-poly humanoid: body + head + arms + legs as one group. */
+function makePlayerMesh(){
+  const g = new THREE.Group();
+  const skin = 0xf2c194;
+  const tunic = 0x7e4a2c;
+  const accent = 0x7cf2c8;
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.6), toonMat(tunic, {flatShading:true}));
+  body.position.y = 1.1; body.castShadow = true; g.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.65), toonMat(skin, {flatShading:true}));
+  head.position.y = 1.95; head.castShadow = true; g.add(head);
+
+  // hair tuft
+  const hair = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.5, 6), toonMat(0x3a2e23, {flatShading:true}));
+  hair.position.set(0, 2.35, -0.1); g.add(hair);
+
+  // accent sash
+  const sash = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.18, 0.62), toonMat(accent, {flatShading:true}));
+  sash.position.y = 1.45; g.add(sash);
+
+  // arms
+  const armGeo = new THREE.BoxGeometry(0.22, 0.95, 0.22);
+  const armMat = toonMat(skin, {flatShading:true});
+  const armL = new THREE.Mesh(armGeo, armMat); armL.position.set( 0.6, 1.15, 0); armL.castShadow = true; g.add(armL);
+  const armR = new THREE.Mesh(armGeo, armMat); armR.position.set(-0.6, 1.15, 0); armR.castShadow = true; g.add(armR);
+
+  // legs
+  const legGeo = new THREE.BoxGeometry(0.3, 0.95, 0.3);
+  const legMat = toonMat(0x2e2017, {flatShading:true});
+  const legL = new THREE.Mesh(legGeo, legMat); legL.position.set( 0.22, 0.5, 0); legL.castShadow = true; g.add(legL);
+  const legR = new THREE.Mesh(legGeo, legMat); legR.position.set(-0.22, 0.5, 0); legR.castShadow = true; g.add(legR);
+
+  // spear back-prop
+  const spear = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), toonMat(0x6e4a30,{flatShading:true}));
+  spear.position.set(-0.3, 1.6, 0.4); spear.rotation.set(0.4, 0, -0.6); g.add(spear);
+  const head2 = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 6), toonMat(0xb3c0c8,{flatShading:true}));
+  head2.position.set(-0.6, 2.55, 0.55); head2.rotation.set(0.4, 0, -0.6); g.add(head2);
+
+  // remember limbs for animation
+  g.userData.parts = { armL, armR, legL, legR, body, head };
+  return g;
+}
+const playerMesh = makePlayerMesh();
+scene.add(playerMesh);
+
+/* Place player at a friendly spawn — plains, slightly above ground. Face into the world. */
+PLAYER.pos.set(0, heightAt(0, 30) + 2, 30);
+PLAYER.yaw = Math.PI;
+
+/* ---------- 7. Camera (smoothed third-person follow) ------------------- */
+
+const CAM = {
+  yaw: 0,           // free-orbit; updated by swipe / mouse / right stick
+  pitch: 0.25,
+  dist: 9,
+  targetDist: 9,
+  height: 1.6,
+  smoothedPos: new THREE.Vector3(),
+  smoothedLook: new THREE.Vector3(),
+};
+
+function updateCamera(dt){
+  const cy = Math.cos(CAM.yaw), sy = Math.sin(CAM.yaw);
+  const cp = Math.cos(CAM.pitch), sp = Math.sin(CAM.pitch);
+  const offset = new THREE.Vector3(sy * cp, sp, cy * cp).multiplyScalar(CAM.dist);
+
+  const focus = PLAYER.pos.clone().add(new THREE.Vector3(0, CAM.height, 0));
+  const wanted = focus.clone().add(offset);
+
+  // ease towards target
+  const t = 1 - Math.pow(0.001, dt);
+  CAM.smoothedPos.lerp(wanted, t);
+  CAM.smoothedLook.lerp(focus, t);
+
+  camera.position.copy(CAM.smoothedPos);
+  camera.lookAt(CAM.smoothedLook);
+}
+
+/* ---------- 8. Input (keyboard + touch + gamepad) ---------------------- */
+
+const INPUT = {
+  move: new THREE.Vector2(), // -1..1
+  cam: { dx: 0, dy: 0 },     // per-frame deltas
+  sprint: false,
+  jumpPressed: false,
+  scan: false,
+  action: false,
+  gamepadIndex: -1,
+};
+
+// Keyboard
+const keys = {};
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space') INPUT.jumpPressed = true;
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Pointer for camera
+let pointerDown = false;
+addEventListener('mousedown', e => { if (e.button === 0) pointerDown = true; });
+addEventListener('mouseup',   e => { if (e.button === 0) pointerDown = false; });
+addEventListener('mousemove', e => {
+  if (pointerDown){
+    INPUT.cam.dx += e.movementX || 0;
+    INPUT.cam.dy += e.movementY || 0;
+  }
+});
+
+// Detect touch
+const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if (!isTouch) document.body.classList.add('no-touch');
+
+// Touch: virtual stick on left, swipe on right
+const stickZone = document.getElementById('stick-zone');
+const stick = document.getElementById('stick');
+const nub = stick.querySelector('.nub');
+const camZone = document.getElementById('cam-zone');
+
+const touchState = {
+  stickId: null, stickCenter: { x:0, y:0 }, stickVec: { x:0, y:0 },
+  camId: null, camLast: { x:0, y:0 },
+};
+
+function startStick(t){
+  touchState.stickId = t.identifier;
+  touchState.stickCenter.x = t.clientX;
+  touchState.stickCenter.y = t.clientY;
+  stick.style.left = (t.clientX - 60) + 'px';
+  stick.style.top  = (t.clientY - 60) + 'px';
+  stick.style.display = 'block';
+}
+function moveStick(t){
+  let dx = t.clientX - touchState.stickCenter.x;
+  let dy = t.clientY - touchState.stickCenter.y;
+  const maxR = 50;
+  const len = Math.hypot(dx, dy);
+  if (len > maxR){ dx = dx / len * maxR; dy = dy / len * maxR; }
+  nub.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+  INPUT.move.set(dx / maxR, dy / maxR); // y positive = down screen = forward
+}
+function endStick(){
+  touchState.stickId = null;
+  stick.style.display = 'none';
+  nub.style.transform = 'translate(-50%,-50%)';
+  INPUT.move.set(0, 0);
+}
+
+stickZone.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches){
+    if (touchState.stickId === null){ startStick(t); break; }
+  }
+}, { passive:false });
+stickZone.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches){
+    if (t.identifier === touchState.stickId){ moveStick(t); break; }
+  }
+}, { passive:false });
+stickZone.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches){
+    if (t.identifier === touchState.stickId){ endStick(); }
+  }
+}, { passive:false });
+stickZone.addEventListener('touchcancel', endStick);
+
+camZone.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches){
+    if (touchState.camId === null){
+      touchState.camId = t.identifier;
+      touchState.camLast.x = t.clientX;
+      touchState.camLast.y = t.clientY;
+      break;
+    }
+  }
+}, { passive:false });
+camZone.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches){
+    if (t.identifier === touchState.camId){
+      INPUT.cam.dx += (t.clientX - touchState.camLast.x);
+      INPUT.cam.dy += (t.clientY - touchState.camLast.y);
+      touchState.camLast.x = t.clientX;
+      touchState.camLast.y = t.clientY;
+    }
+  }
+}, { passive:false });
+camZone.addEventListener('touchend', e => {
+  for (const t of e.changedTouches){
+    if (t.identifier === touchState.camId){ touchState.camId = null; }
+  }
+});
+
+// Buttons
+document.querySelectorAll('.btn').forEach(b => {
+  const act = b.dataset.act;
+  const press = e => {
+    e.preventDefault();
+    b.classList.add('held');
+    if (act === 'sprint') INPUT.sprint = true;
+    if (act === 'jump')   INPUT.jumpPressed = true;
+    if (act === 'scan')   INPUT.scan = true;
+    if (act === 'action') INPUT.action = true;
+  };
+  const release = e => {
+    e.preventDefault();
+    b.classList.remove('held');
+    if (act === 'sprint') INPUT.sprint = false;
+    if (act === 'scan')   INPUT.scan = false;
+    if (act === 'action') INPUT.action = false;
+  };
+  b.addEventListener('touchstart', press, { passive:false });
+  b.addEventListener('touchend', release, { passive:false });
+  b.addEventListener('mousedown', press);
+  b.addEventListener('mouseup', release);
+  b.addEventListener('mouseleave', release);
+});
+
+// Gamepad polling
+addEventListener('gamepadconnected', e => { INPUT.gamepadIndex = e.gamepad.index; });
+addEventListener('gamepaddisconnected', e => { if (INPUT.gamepadIndex === e.gamepad.index) INPUT.gamepadIndex = -1; });
+let lastJumpBtn = false;
+function pollGamepad(){
+  if (INPUT.gamepadIndex < 0) return;
+  const gp = navigator.getGamepads?.()[INPUT.gamepadIndex];
+  if (!gp) return;
+  const dz = v => Math.abs(v) < 0.15 ? 0 : v;
+  INPUT.move.x = dz(gp.axes[0]);
+  INPUT.move.y = dz(gp.axes[1]);
+  INPUT.cam.dx += dz(gp.axes[2]) * 18;
+  INPUT.cam.dy += dz(gp.axes[3]) * 14;
+  INPUT.sprint = gp.buttons[10]?.pressed || gp.buttons[6]?.pressed;
+  const jumpNow = gp.buttons[0]?.pressed;
+  if (jumpNow && !lastJumpBtn) INPUT.jumpPressed = true;
+  lastJumpBtn = jumpNow;
+  INPUT.action = gp.buttons[2]?.pressed;
+  INPUT.scan   = gp.buttons[3]?.pressed;
+}
+
+/* Build per-frame movement intent from keyboard. */
+function pollKeyboard(){
+  if (isTouch && INPUT.gamepadIndex < 0 && (INPUT.move.x || INPUT.move.y)) return; // touch wins
+  let x = 0, y = 0;
+  if (keys['KeyW'] || keys['ArrowUp'])    y -= 1;
+  if (keys['KeyS'] || keys['ArrowDown'])  y += 1;
+  if (keys['KeyA'] || keys['ArrowLeft'])  x -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) x += 1;
+  const len = Math.hypot(x, y);
+  if (len > 1){ x /= len; y /= len; }
+  if (x || y){ INPUT.move.set(x, y); }
+  INPUT.sprint = !!keys['ShiftLeft'] || !!keys['ShiftRight'] || INPUT.sprint;
+  INPUT.scan = !!keys['KeyQ'] || INPUT.scan;
+  INPUT.action = !!keys['KeyE'] || INPUT.action;
+}
+
+/* ---------- 9. Player update ------------------------------------------ */
+
+function updatePlayer(dt){
+  pollKeyboard();
+  pollGamepad();
+
+  // Camera rotation from deltas
+  const camSens = 0.0035;
+  CAM.yaw -= INPUT.cam.dx * camSens;
+  CAM.pitch = clamp(CAM.pitch + INPUT.cam.dy * camSens * 0.8, -0.35, 1.05);
+  INPUT.cam.dx = 0; INPUT.cam.dy = 0;
+
+  // Compute move direction relative to camera
+  const mx = INPUT.move.x;
+  const my = INPUT.move.y;
+  const mlen = Math.hypot(mx, my);
+  // Camera-forward in the horizontal plane (camera looks toward player from yaw, so forward is opposite)
+  // Player should walk forward when stick goes up (my < 0).
+  const camForward = new THREE.Vector3(-Math.sin(CAM.yaw), 0, -Math.cos(CAM.yaw)).normalize();
+  // Right = forward × up, written out for clarity (camForward.x = -sin, camForward.z = -cos).
+  const camRight   = new THREE.Vector3(-camForward.z, 0, camForward.x).normalize();
+
+  const moveDir = new THREE.Vector3();
+  if (mlen > 0.05){
+    moveDir.addScaledVector(camForward, -my);
+    moveDir.addScaledVector(camRight, mx);
+    if (moveDir.lengthSq() > 0){
+      moveDir.normalize();
+      // face direction (smooth)
+      const targetYaw = Math.atan2(moveDir.x, moveDir.z);
+      let dy = targetYaw - PLAYER.yaw;
+      while (dy >  Math.PI) dy -= TAU;
+      while (dy < -Math.PI) dy += TAU;
+      PLAYER.yaw += dy * Math.min(1, dt * 12);
+    }
+  }
+
+  // Stamina-aware sprint
+  const wantSprint = INPUT.sprint && mlen > 0.2 && PLAYER.sp > 6;
+  if (wantSprint){ PLAYER.sp = Math.max(0, PLAYER.sp - dt * 22); PLAYER.sprinting = true; }
+  else { PLAYER.sp = Math.min(PLAYER.spMax, PLAYER.sp + dt * 14); PLAYER.sprinting = false; }
+
+  const speed = PLAYER.sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
+
+  // Horizontal velocity
+  const wantedV = moveDir.clone().multiplyScalar(speed * clamp(mlen, 0, 1));
+  // smooth ground accel
+  const accel = PLAYER.onGround ? 18 : 5;
+  PLAYER.vel.x = lerp(PLAYER.vel.x, wantedV.x, Math.min(1, dt * accel));
+  PLAYER.vel.z = lerp(PLAYER.vel.z, wantedV.z, Math.min(1, dt * accel));
+
+  // Jump
+  if (INPUT.jumpPressed && PLAYER.onGround && PLAYER.sp > 12){
+    PLAYER.vel.y = PLAYER.jumpV;
+    PLAYER.sp -= 12;
+    PLAYER.onGround = false;
+  }
+  INPUT.jumpPressed = false;
+
+  // Gravity
+  PLAYER.vel.y += PLAYER.gravity * dt;
+
+  // Integrate
+  PLAYER.pos.addScaledVector(PLAYER.vel, dt);
+
+  // Bounds
+  const limit = WORLD.size - 4;
+  PLAYER.pos.x = clamp(PLAYER.pos.x, -limit, limit);
+  PLAYER.pos.z = clamp(PLAYER.pos.z, -limit, limit);
+
+  // Ground collision (terrain heightmap)
+  const groundY = heightAt(PLAYER.pos.x, PLAYER.pos.z);
+  if (PLAYER.pos.y < groundY){
+    PLAYER.pos.y = groundY;
+    PLAYER.vel.y = 0;
+    PLAYER.onGround = true;
+  } else if (PLAYER.pos.y - groundY < 0.05){
+    PLAYER.onGround = true;
+  } else {
+    PLAYER.onGround = false;
+  }
+  // water push-up (don't drown in Stage 1)
+  if (PLAYER.pos.y < -2){ PLAYER.pos.y = -2; PLAYER.vel.y = 0; }
+
+  // Update mesh transform
+  playerMesh.position.copy(PLAYER.pos);
+  playerMesh.rotation.y = PLAYER.yaw;
+
+  // Animate limbs based on speed
+  const horizSpeed = Math.hypot(PLAYER.vel.x, PLAYER.vel.z);
+  const t = performance.now() * 0.001;
+  const swing = Math.sin(t * (PLAYER.sprinting ? 14 : 8)) * Math.min(1, horizSpeed * 0.12);
+  const p = playerMesh.userData.parts;
+  p.legL.rotation.x =  swing * 0.8;
+  p.legR.rotation.x = -swing * 0.8;
+  p.armL.rotation.x = -swing * 0.5;
+  p.armR.rotation.x =  swing * 0.5;
+  p.body.position.y = 1.1 + Math.abs(swing) * 0.04;
+}
+
+/* ---------- 10. Dinos -------------------------------------------------- */
+
+/* Procedural dino builder — different silhouettes from a small set of building blocks.
+   Stage 1 species: Parasaur (herbivore wanderer), Raptor (small predator), Trike (territorial). */
+
+function makeDinoMesh(species){
+  const g = new THREE.Group();
+  const palette = {
+    parasaur: { body: 0x6c9b5a, belly: 0xc8d99a, crest: 0xd66a3a, eye: 0x1e1e1e },
+    raptor:   { body: 0x854a30, belly: 0xc59866, crest: 0x4a1a0e, eye: 0xf8e76a },
+    trike:    { body: 0x8c6a4a, belly: 0xe1cfa6, crest: 0xb89e76, eye: 0x1e1e1e },
+  }[species] || { body: 0x6c9b5a, belly: 0xc8d99a, crest: 0x884422, eye: 0x111111 };
+  const bodyMat = toonMat(palette.body, { flatShading:true });
+  const bellyMat = toonMat(palette.belly, { flatShading:true });
+  const crestMat = toonMat(palette.crest, { flatShading:true });
+  const eyeMat = toonMat(palette.eye, { flatShading:true });
+
+  if (species === 'parasaur'){
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.4, 3.2), bodyMat);
+    body.position.y = 1.4; g.add(body);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 3.0), bellyMat);
+    belly.position.y = 0.9; g.add(belly);
+    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.4), bodyMat);
+    neck.position.set(0, 2.0, 1.7); neck.rotation.x = -0.6; g.add(neck);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 1.1), bodyMat);
+    head.position.set(0, 2.6, 2.6); g.add(head);
+    const crest = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.6, 6), crestMat);
+    crest.position.set(0, 3.1, 2.3); crest.rotation.set(-0.6, 0, 0); g.add(crest);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2.6, 6), bodyMat);
+    tail.position.set(0, 1.3, -2.4); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.45, 1.4, 0.5);
+    const lFL = new THREE.Mesh(legGeo, bodyMat); lFL.position.set( 0.55, 0.7,  0.8); g.add(lFL);
+    const lFR = new THREE.Mesh(legGeo, bodyMat); lFR.position.set(-0.55, 0.7,  0.8); g.add(lFR);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.55, 0.7, -0.9); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.55, 0.7, -0.9); g.add(lBR);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), eyeMat); eyeL.position.set( 0.3, 2.75, 3.1); g.add(eyeL);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), eyeMat); eyeR.position.set(-0.3, 2.75, 3.1); g.add(eyeR);
+    g.userData.parts = { lFL, lFR, lBL, lBR, head, tail, neck };
+  }
+  else if (species === 'raptor'){
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 2.2), bodyMat);
+    body.position.y = 1.2; g.add(body);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.3, 2.0), bellyMat);
+    belly.position.y = 0.9; g.add(belly);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 1.1), bodyMat);
+    head.position.set(0, 1.5, 1.7); g.add(head);
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.4), bodyMat);
+    snout.position.set(0, 1.4, 2.2); g.add(snout);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 2.2), crestMat);
+    stripe.position.set(0, 1.55, 0); g.add(stripe);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.35, 2.2, 6), bodyMat);
+    tail.position.set(0, 1.15, -1.9); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.3, 1.1, 0.35);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.3, 0.55,  0.1); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.3, 0.55,  0.1); g.add(lBR);
+    const armGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
+    const aL = new THREE.Mesh(armGeo, bodyMat); aL.position.set( 0.5, 1.1, 1.0); aL.rotation.x = 0.5; g.add(aL);
+    const aR = new THREE.Mesh(armGeo, bodyMat); aR.position.set(-0.5, 1.1, 1.0); aR.rotation.x = 0.5; g.add(aR);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), eyeMat); eyeL.position.set( 0.18, 1.65, 2.1); g.add(eyeL);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), eyeMat); eyeR.position.set(-0.18, 1.65, 2.1); g.add(eyeR);
+    g.userData.parts = { lFL: aL, lFR: aR, lBL, lBR, head, tail };
+  }
+  else if (species === 'trike'){
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.8, 3.6), bodyMat);
+    body.position.y = 1.6; g.add(body);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.6, 3.4), bellyMat);
+    belly.position.y = 1.0; g.add(belly);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.6), bodyMat);
+    head.position.set(0, 1.7, 2.6); g.add(head);
+    const frill = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.8, 0.25), crestMat);
+    frill.position.set(0, 2.0, 2.0); frill.rotation.x = -0.3; g.add(frill);
+    const hornC = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.0, 6), crestMat);
+    hornC.position.set(0, 2.0, 3.3); hornC.rotation.x = -1.4; g.add(hornC);
+    const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.2, 6), crestMat);
+    hornL.position.set( 0.4, 2.1, 3.3); hornL.rotation.x = -1.4; g.add(hornL);
+    const hornR = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.2, 6), crestMat);
+    hornR.position.set(-0.4, 2.1, 3.3); hornR.rotation.x = -1.4; g.add(hornR);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2.2, 6), bodyMat);
+    tail.position.set(0, 1.4, -2.8); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.55, 1.6, 0.6);
+    const lFL = new THREE.Mesh(legGeo, bodyMat); lFL.position.set( 0.8, 0.8,  1.0); g.add(lFL);
+    const lFR = new THREE.Mesh(legGeo, bodyMat); lFR.position.set(-0.8, 0.8,  1.0); g.add(lFR);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.8, 0.8, -1.0); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.8, 0.8, -1.0); g.add(lBR);
+    g.userData.parts = { lFL, lFR, lBL, lBR, head, tail };
+  }
+  g.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
+
+/* Dino class: simple state-machine AI. */
+const DINO_STATES = {
+  IDLE: 'idle',
+  WANDER: 'wander',
+  ALERT: 'alert',
+  FLEE: 'flee',
+  PATROL: 'patrol',
+  CHARGE: 'charge', // trike attack stub
+};
+
+class Dino {
+  constructor(species, x, z, scale = 1){
+    this.species = species;
+    this.mesh = makeDinoMesh(species);
+    this.mesh.scale.setScalar(scale);
+    this.pos = new THREE.Vector3(x, heightAt(x, z), z);
+    this.vel = new THREE.Vector3();
+    this.yaw = rand(TAU);
+    this.state = DINO_STATES.IDLE;
+    this.stateTimer = 0;
+    this.target = new THREE.Vector3();
+    this.scale = scale;
+    // species-specific stats
+    const profile = {
+      parasaur: { speed: 7.0, sprintSpeed: 12.5, fleeRadius: 22, alertRadius: 32, calm: 1.0, hp: 80,  diet:'herb',  size:1.0 },
+      raptor:   { speed: 6.0, sprintSpeed: 14.0, fleeRadius: 0,  alertRadius: 28, calm: 0.4, hp: 60,  diet:'carn',  size:0.8 },
+      trike:    { speed: 5.0, sprintSpeed: 10.0, fleeRadius: 0,  alertRadius: 18, calm: 0.7, hp: 180, diet:'herb',  size:1.3 },
+    }[species];
+    this.profile = profile;
+    this.hp = profile.hp;
+    this.mesh.scale.multiplyScalar(profile.size);
+    scene.add(this.mesh);
+    this.setState(DINO_STATES.IDLE);
+  }
+
+  setState(s){
+    this.state = s;
+    this.stateTimer = 0;
+    if (s === DINO_STATES.IDLE)   this.stateDuration = rand(2, 5);
+    if (s === DINO_STATES.WANDER){
+      this.stateDuration = rand(3, 7);
+      const d = rand(8, 24);
+      const a = rand(TAU);
+      this.target.set(this.pos.x + Math.cos(a) * d, 0, this.pos.z + Math.sin(a) * d);
+    }
+    if (s === DINO_STATES.PATROL){
+      this.stateDuration = rand(6, 12);
+      const d = rand(20, 40);
+      const a = rand(TAU);
+      this.target.set(this.pos.x + Math.cos(a) * d, 0, this.pos.z + Math.sin(a) * d);
+    }
+    if (s === DINO_STATES.ALERT) this.stateDuration = rand(1, 2);
+    if (s === DINO_STATES.FLEE)  this.stateDuration = rand(3, 6);
+    if (s === DINO_STATES.CHARGE)this.stateDuration = rand(2, 4);
+  }
+
+  update(dt, playerPos){
+    this.stateTimer += dt;
+    const distToPlayer = this.pos.distanceTo(playerPos);
+
+    // Perception checks
+    const p = this.profile;
+    if (p.diet === 'herb' && this.state !== DINO_STATES.FLEE && distToPlayer < p.fleeRadius){
+      this.setState(DINO_STATES.FLEE);
+    } else if (p.diet === 'carn' && this.state !== DINO_STATES.ALERT && this.state !== DINO_STATES.CHARGE && distToPlayer < p.alertRadius){
+      this.setState(DINO_STATES.ALERT);
+    } else if (this.species === 'trike' && this.state !== DINO_STATES.CHARGE && distToPlayer < p.alertRadius){
+      // Trike alerts then charges if you get close
+      if (distToPlayer < 8) this.setState(DINO_STATES.CHARGE);
+      else if (this.state !== DINO_STATES.ALERT) this.setState(DINO_STATES.ALERT);
+    }
+
+    let targetDir = new THREE.Vector3();
+    let speed = 0;
+
+    switch (this.state){
+      case DINO_STATES.IDLE: {
+        // tiny idle bob; pick a new state when timer runs out
+        if (this.stateTimer > this.stateDuration){
+          this.setState(Math.random() < 0.3 ? DINO_STATES.PATROL : DINO_STATES.WANDER);
+        }
+        speed = 0;
+        break;
+      }
+      case DINO_STATES.WANDER:
+      case DINO_STATES.PATROL: {
+        const dx = this.target.x - this.pos.x;
+        const dz = this.target.z - this.pos.z;
+        const d = Math.hypot(dx, dz);
+        if (d < 1.5 || this.stateTimer > this.stateDuration){
+          this.setState(DINO_STATES.IDLE);
+          break;
+        }
+        targetDir.set(dx / d, 0, dz / d);
+        speed = p.speed * (this.state === DINO_STATES.PATROL ? 1.0 : 0.6);
+        break;
+      }
+      case DINO_STATES.ALERT: {
+        const dx = playerPos.x - this.pos.x;
+        const dz = playerPos.z - this.pos.z;
+        const d = Math.hypot(dx, dz);
+        // face player
+        targetDir.set(dx / d, 0, dz / d);
+        speed = 0;
+        if (this.stateTimer > this.stateDuration){
+          if (p.diet === 'carn' && distToPlayer < p.alertRadius * 0.7){
+            this.setState(DINO_STATES.CHARGE);
+          } else {
+            this.setState(DINO_STATES.WANDER);
+          }
+        }
+        break;
+      }
+      case DINO_STATES.FLEE: {
+        const dx = this.pos.x - playerPos.x;
+        const dz = this.pos.z - playerPos.z;
+        const d = Math.hypot(dx, dz);
+        targetDir.set(dx / d, 0, dz / d);
+        speed = p.sprintSpeed;
+        if (distToPlayer > p.fleeRadius * 1.8 || this.stateTimer > this.stateDuration){
+          this.setState(DINO_STATES.IDLE);
+        }
+        break;
+      }
+      case DINO_STATES.CHARGE: {
+        const dx = playerPos.x - this.pos.x;
+        const dz = playerPos.z - this.pos.z;
+        const d = Math.hypot(dx, dz);
+        targetDir.set(dx / d, 0, dz / d);
+        speed = p.sprintSpeed;
+        if (this.stateTimer > this.stateDuration || distToPlayer > p.alertRadius * 1.5){
+          this.setState(DINO_STATES.WANDER);
+        }
+        break;
+      }
+    }
+
+    // Smooth yaw toward target
+    if (targetDir.lengthSq() > 0){
+      const wantYaw = Math.atan2(targetDir.x, targetDir.z);
+      let dy = wantYaw - this.yaw;
+      while (dy >  Math.PI) dy -= TAU;
+      while (dy < -Math.PI) dy += TAU;
+      this.yaw += dy * Math.min(1, dt * 6);
+    }
+
+    // Move
+    const forward = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    this.vel.x = forward.x * speed;
+    this.vel.z = forward.z * speed;
+    this.pos.addScaledVector(this.vel, dt);
+
+    // World bounds
+    const limit = WORLD.size - 6;
+    this.pos.x = clamp(this.pos.x, -limit, limit);
+    this.pos.z = clamp(this.pos.z, -limit, limit);
+    // Ground stick
+    this.pos.y = heightAt(this.pos.x, this.pos.z);
+
+    // Pose
+    this.mesh.position.copy(this.pos);
+    this.mesh.rotation.y = this.yaw;
+
+    // Animate legs based on speed
+    const sp = Math.hypot(this.vel.x, this.vel.z);
+    const t = performance.now() * 0.001;
+    const swing = Math.sin(t * (sp > 0.2 ? 6 + sp * 0.3 : 1.5)) * Math.min(1, sp * 0.12 + 0.05);
+    const pp = this.mesh.userData.parts;
+    if (pp){
+      if (pp.lFL) pp.lFL.rotation.x =  swing;
+      if (pp.lFR) pp.lFR.rotation.x = -swing;
+      if (pp.lBL) pp.lBL.rotation.x = -swing;
+      if (pp.lBR) pp.lBR.rotation.x =  swing;
+      if (pp.tail) pp.tail.rotation.z = Math.sin(t * 2) * 0.15;
+      if (pp.head) pp.head.rotation.y = Math.sin(t * 0.8 + this.pos.x) * 0.15;
+    }
+  }
+}
+
+/* Spawn dinos across biomes. */
+const dinos = [];
+function spawnDinos(){
+  const rng = mulberry32(WORLD.seed + 101);
+  const profiles = [
+    { sp:'parasaur', n: 18 },
+    { sp:'raptor',   n: 10 },
+    { sp:'trike',    n: 6 },
+  ];
+  for (const cfg of profiles){
+    let placed = 0, attempts = 0;
+    while (placed < cfg.n && attempts < cfg.n * 8){
+      attempts++;
+      const x = (rng() - 0.5) * WORLD.size * 1.7;
+      const z = (rng() - 0.5) * WORLD.size * 1.7;
+      const h = heightAt(x, z);
+      if (h < -1) continue;
+      // avoid spawning too close to player spawn
+      if (Math.hypot(x - PLAYER.pos.x, z - PLAYER.pos.z) < 30) continue;
+      const scale = 0.9 + rng() * 0.4;
+      dinos.push(new Dino(cfg.sp, x, z, scale));
+      placed++;
+    }
+  }
+}
+spawnDinos();
+
+/* ---------- 11. Day/night cycle --------------------------------------- */
+
+const TIME = {
+  t: 0.25,   // 0=dawn, 0.25=noon, 0.5=dusk, 0.75=midnight
+  day: 1,
+};
+function updateTime(dt){
+  TIME.t += dt / WORLD.dayLength;
+  while (TIME.t >= 1){ TIME.t -= 1; TIME.day++; }
+
+  // sun angle: full revolution per day
+  const a = TIME.t * TAU - Math.PI / 2; // start before noon
+  const sunDir = new THREE.Vector3(Math.cos(a), Math.sin(a), 0.3).normalize();
+  sunLight.position.copy(sunDir).multiplyScalar(280);
+  sunLight.target.position.copy(PLAYER.pos);
+
+  // sun disc visible in sky
+  sunDisc.position.copy(camera.position).addScaledVector(sunDir, 900);
+  sunDisc.lookAt(camera.position);
+
+  // intensity: 0 at night, full at noon
+  const day01 = clamp(Math.max(0, sunDir.y * 1.2 + 0.15), 0, 1);
+  sunLight.intensity = lerp(0.05, 1.15, day01);
+  ambient.intensity = lerp(0.2, 0.6, day01);
+
+  // sky colors
+  const top = new THREE.Color();
+  const bot = new THREE.Color();
+  if (day01 > 0.4){ // day
+    top.setHex(0x6cb6ff); bot.setHex(0xd6f0e2);
+  } else if (day01 > 0.05){ // dawn/dusk
+    top.setHex(0xff9466); bot.setHex(0xffd9b0);
+  } else { // night
+    top.setHex(0x0c1530); bot.setHex(0x1a2845);
+  }
+  SKY.uniforms.uTop.value.lerp(top, 0.08);
+  SKY.uniforms.uBottom.value.lerp(bot, 0.08);
+  sunLight.color.setRGB(
+    lerp(1.0, 1.0, day01),
+    lerp(0.7, 0.95, day01),
+    lerp(0.55, 0.78, day01)
+  );
+  sunDisc.material.opacity = clamp(day01 * 1.4, 0, 1);
+
+  // fog tint blends with current biome fog
+  const b = biomeAt(PLAYER.pos.x, PLAYER.pos.z);
+  const fogTarget = new THREE.Color(b.fogColor);
+  if (day01 < 0.2) fogTarget.lerp(new THREE.Color(0x1a2845), 0.7);
+  scene.fog.color.lerp(fogTarget, 0.04);
+  scene.background = scene.fog.color;
+  scene.fog.near = lerp(40, 80, day01);
+  scene.fog.far = lerp(380, 700, day01);
+
+  // HUD clock label
+  let phase = 'Night';
+  if (day01 > 0.85) phase = 'Noon';
+  else if (day01 > 0.3) phase = 'Day';
+  else if (day01 > 0.1) phase = sunDir.y > 0 ? 'Dawn' : 'Dusk';
+  clockText.textContent = `${phase} · Day ${TIME.day}`;
+}
+
+/* ---------- 12. HUD updates ------------------------------------------- */
+
+const meterHp = document.querySelector('.meter.hp i');
+const meterSp = document.querySelector('.meter.sp i');
+const clockText = document.getElementById('clock-text');
+const banner = document.getElementById('biome-banner');
+const mmCanvas = document.getElementById('minimap-canvas');
+const mmCtx = mmCanvas.getContext('2d');
+
+let lastBiome = null;
+function updateHUD(){
+  meterHp.style.setProperty('--v', (PLAYER.hp / PLAYER.hpMax * 100) + '%');
+  meterSp.style.setProperty('--v', (PLAYER.sp / PLAYER.spMax * 100) + '%');
+
+  const b = biomeAt(PLAYER.pos.x, PLAYER.pos.z);
+  if (b.id !== lastBiome){
+    lastBiome = b.id;
+    banner.textContent = b.name;
+    banner.classList.add('show');
+    clearTimeout(banner._hideT);
+    banner._hideT = setTimeout(() => banner.classList.remove('show'), 2400);
+  }
+  drawMinimap();
+}
+
+/* Minimap drawn each frame. */
+const MM_RANGE = 220; // world units shown
+function drawMinimap(){
+  const W = mmCanvas.width, H = mmCanvas.height;
+  mmCtx.clearRect(0, 0, W, H);
+  // biome tint of current location
+  const tint = new THREE.Color(biomeAt(PLAYER.pos.x, PLAYER.pos.z).color);
+  mmCtx.fillStyle = `rgba(${(tint.r*255)|0},${(tint.g*255)|0},${(tint.b*255)|0},0.4)`;
+  mmCtx.fillRect(0, 0, W, H);
+
+  // grid
+  mmCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+  for (let i = 0; i <= 4; i++){
+    const v = (i / 4) * W;
+    mmCtx.beginPath(); mmCtx.moveTo(v, 0); mmCtx.lineTo(v, H); mmCtx.stroke();
+    mmCtx.beginPath(); mmCtx.moveTo(0, v); mmCtx.lineTo(W, v); mmCtx.stroke();
+  }
+
+  // dinos
+  for (const d of dinos){
+    const dx = d.pos.x - PLAYER.pos.x;
+    const dz = d.pos.z - PLAYER.pos.z;
+    if (Math.abs(dx) > MM_RANGE || Math.abs(dz) > MM_RANGE) continue;
+    const sx = W * 0.5 + (dx / MM_RANGE) * W * 0.5;
+    const sy = H * 0.5 + (dz / MM_RANGE) * H * 0.5;
+    mmCtx.fillStyle = d.profile.diet === 'carn' ? '#ff6e6e' : '#a0e890';
+    mmCtx.beginPath(); mmCtx.arc(sx, sy, 4, 0, TAU); mmCtx.fill();
+  }
+  // player triangle
+  mmCtx.save();
+  mmCtx.translate(W/2, H/2);
+  mmCtx.rotate(PLAYER.yaw);
+  mmCtx.fillStyle = '#7cf2c8';
+  mmCtx.beginPath();
+  mmCtx.moveTo(0, -8); mmCtx.lineTo(6, 6); mmCtx.lineTo(-6, 6); mmCtx.closePath();
+  mmCtx.fill();
+  mmCtx.restore();
+  // border
+  mmCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+  mmCtx.lineWidth = 2;
+  mmCtx.strokeRect(0, 0, W, H);
+}
+
+/* ---------- 13. Save / load (minimal Stage 1) ------------------------- */
+
+const SAVE_KEY = 'saurian.stage1.v1';
+function save(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      pos: PLAYER.pos.toArray(),
+      yaw: PLAYER.yaw,
+      hp: PLAYER.hp, sp: PLAYER.sp,
+      time: TIME.t, day: TIME.day,
+    }));
+  } catch(_){}
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (Array.isArray(s.pos)) PLAYER.pos.fromArray(s.pos);
+    if (typeof s.yaw === 'number') PLAYER.yaw = s.yaw;
+    if (typeof s.hp === 'number')  PLAYER.hp = s.hp;
+    if (typeof s.sp === 'number')  PLAYER.sp = s.sp;
+    if (typeof s.time === 'number') TIME.t = s.time;
+    if (typeof s.day === 'number')  TIME.day = s.day;
+  } catch(_){}
+}
+load();
+setInterval(save, 6000);
+addEventListener('beforeunload', save);
+
+/* ---------- 14. Main loop --------------------------------------------- */
+
+let last = performance.now();
+let started = false;
+
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+
+  if (started){
+    updatePlayer(dt);
+    for (const d of dinos) d.update(dt, PLAYER.pos);
+    updateTime(dt);
+    updateCamera(dt);
+
+    // perf: cull distant dinos visibility
+    for (const d of dinos){
+      const distSq = d.pos.distanceToSquared(PLAYER.pos);
+      d.mesh.visible = distSq < 600 * 600;
+    }
+    updateHUD();
+  } else {
+    // Slowly pan the camera during boot so it isn't a static black-edged frame.
+    CAM.yaw += dt * 0.05;
+    updateCamera(dt);
+  }
+
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(loop);
+
+/* ---------- 15. Resize ------------------------------------------------- */
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}, { passive: true });
+
+/* ---------- 16. Boot sequence ----------------------------------------- */
+
+const bootFill = document.getElementById('boot-fill');
+const bootStatus = document.getElementById('boot-status');
+const bootStart = document.getElementById('boot-start');
+const boot = document.getElementById('boot');
+
+const steps = [
+  'shaping the continents...',
+  'planting the leafgrove...',
+  'breeding the parasaurs...',
+  'feeding the raptors...',
+  'lighting the sun...',
+  'awakening the wilds...'
+];
+let stepIdx = 0;
+function tickBoot(){
+  stepIdx++;
+  const p = Math.min(1, stepIdx / steps.length);
+  bootFill.style.width = (p * 100) + '%';
+  bootStatus.textContent = steps[Math.min(stepIdx, steps.length - 1)];
+  if (stepIdx >= steps.length){
+    bootStart.style.display = 'inline-block';
+    bootStatus.textContent = 'tap to begin';
+  } else {
+    setTimeout(tickBoot, 350);
+  }
+}
+setTimeout(tickBoot, 200);
+
+bootStart.addEventListener('click', () => {
+  started = true;
+  boot.style.opacity = '0';
+  boot.style.pointerEvents = 'none';
+  setTimeout(() => boot.classList.add('hidden'), 800);
+  // Run one frame immediately so we're not stuck on dt=0
+  last = performance.now();
+});
+
+})();
+</script>
+</body>
+</html>
