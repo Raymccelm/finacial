@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="$100 Dream">
+<title>Hundred Dollar Dream</title>
+
+<!-- Inline manifest via data URI so the file stays self-contained and still installs as a PWA -->
+<link id="manifest-link" rel="manifest">
+
+<!-- Inline icon as SVG data URI -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237CFFCB'/><stop offset='1' stop-color='%234BB8FF'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='%230b0d12'/><text x='50' y='62' font-size='44' font-family='system-ui,-apple-system' font-weight='700' text-anchor='middle' fill='url(%23g)'>$100</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237CFFCB'/><stop offset='1' stop-color='%234BB8FF'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='%230b0d12'/><text x='50' y='62' font-size='44' font-family='system-ui,-apple-system' font-weight='700' text-anchor='middle' fill='url(%23g)'>$100</text></svg>">
+
+<!-- Chart.js via CDN + date-fns adapter for time-scale charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+<style>
+/* ---------- Reset & theme variables ---------- */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0b0d12;
+  --bg-elev:#141821;
+  --bg-elev-2:#1c2230;
+  --border:#262d3d;
+  --text:#e8ecf4;
+  --text-dim:#8a93a6;
+  --text-faint:#5a6273;
+  --accent:#7CFFCB;
+  --accent-2:#4BB8FF;
+  --green:#5ee6a8;
+  --green-bg:rgba(94,230,168,.12);
+  --red:#ff7a8a;
+  --red-bg:rgba(255,122,138,.12);
+  --yellow:#ffd47e;
+  --shadow:0 6px 28px rgba(0,0,0,.35);
+  --radius:14px;
+  --radius-sm:10px;
+  --tab-h:64px;
+  --safe-b:env(safe-area-inset-bottom,0);
+  --safe-t:env(safe-area-inset-top,0);
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+[data-theme="light"]{
+  --bg:#f6f7fb;
+  --bg-elev:#ffffff;
+  --bg-elev-2:#eef1f7;
+  --border:#dbe0ea;
+  --text:#0d1320;
+  --text-dim:#5a6273;
+  --text-faint:#8a93a6;
+  --accent:#19b486;
+  --accent-2:#1a83d6;
+  --green:#0f9b6a;
+  --green-bg:rgba(15,155,106,.10);
+  --red:#d6435a;
+  --red-bg:rgba(214,67,90,.10);
+  --shadow:0 6px 24px rgba(20,28,48,.08);
+}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:15px;
+  line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+  overscroll-behavior-y:contain;
+}
+button,input,select,textarea{font:inherit;color:inherit;background:none;border:0;outline:0}
+button{cursor:pointer}
+input,textarea,select{background:var(--bg-elev-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;width:100%;color:var(--text)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent-2)}
+::placeholder{color:var(--text-faint)}
+
+/* ---------- App layout ---------- */
+#app{
+  min-height:100vh;
+  padding-top:calc(var(--safe-t) + 8px);
+  padding-bottom:calc(var(--tab-h) + var(--safe-b) + 16px);
+  max-width:980px;
+  margin:0 auto;
+}
+.view{display:none;padding:8px 16px 16px}
+.view.active{display:block}
+.view-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 2px 12px;
+}
+.view-title{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.view-sub{font-size:13px;color:var(--text-dim);margin-top:2px}
+
+/* ---------- Cards ---------- */
+.card{
+  background:var(--bg-elev);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--shadow);
+  margin-bottom:12px;
+}
+.card-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-title{font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.muted{color:var(--text-dim)}
+.faint{color:var(--text-faint)}
+.tiny{font-size:12px}
+
+/* ---------- Big number / portfolio hero ---------- */
+.hero-value{
+  font-size:44px;font-weight:800;letter-spacing:-.02em;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  line-height:1.05;margin-top:4px;
+}
+.hero-change{margin-top:6px;font-size:15px;font-weight:600}
+.up{color:var(--green)}
+.down{color:var(--red)}
+.flat{color:var(--text-dim)}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;
+}
+.chip.up{background:var(--green-bg);color:var(--green)}
+.chip.down{background:var(--red-bg);color:var(--red)}
+.chip.flat{background:var(--bg-elev-2);color:var(--text-dim)}
+
+/* ---------- Buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 18px;border-radius:var(--radius-sm);
+  background:var(--bg-elev-2);color:var(--text);font-weight:600;
+  border:1px solid var(--border);min-height:44px;
+  transition:transform .08s ease,opacity .15s;
+}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#08110f;border:0;
+}
+.btn-buy{background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
+.btn-sell{background:var(--red-bg);color:var(--red);border:1px solid var(--red)}
+.btn-ghost{background:transparent}
+.btn-block{width:100%}
+.btn-row{display:flex;gap:8px}
+.btn-row .btn{flex:1}
+
+/* ---------- Coin list ---------- */
+.coin-list{display:flex;flex-direction:column;gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.coin-row{
+  display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;
+  padding:12px 14px;background:var(--bg-elev);min-height:60px;
+  cursor:pointer;transition:background .12s;
+}
+.coin-row:active,.coin-row:hover{background:var(--bg-elev-2)}
+.coin-img{width:32px;height:32px;border-radius:50%;background:var(--bg-elev-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--text-dim);overflow:hidden}
+.coin-img img{width:100%;height:100%;object-fit:cover}
+.coin-name{font-weight:600;font-size:15px}
+.coin-sym{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em}
+.coin-price{text-align:right}
+.coin-price .px{font-weight:600}
+.coin-price .ch{font-size:12px;font-weight:600;margin-top:2px}
+
+/* ---------- Search / filter bar ---------- */
+.bar{display:flex;gap:8px;margin-bottom:12px}
+.bar input{flex:1}
+.tabs-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.pill{
+  padding:8px 14px;border-radius:999px;border:1px solid var(--border);
+  background:var(--bg-elev);font-size:13px;font-weight:600;color:var(--text-dim);
+}
+.pill.active{background:var(--bg-elev-2);color:var(--text);border-color:var(--accent-2)}
+
+/* ---------- Bottom tab bar ---------- */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;
+  height:calc(var(--tab-h) + var(--safe-b));
+  padding-bottom:var(--safe-b);
+  background:rgba(11,13,18,.92);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-around;align-items:stretch;
+  z-index:50;
+}
+[data-theme="light"] .tabbar{background:rgba(246,247,251,.92)}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  color:var(--text-dim);font-size:11px;font-weight:600;
+  min-width:44px;
+}
+.tab.active{color:var(--accent)}
+.tab svg{width:22px;height:22px}
+
+/* ---------- Modal / sheet ---------- */
+.sheet-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:flex-end;justify-content:center;
+  z-index:100;
+}
+.sheet-backdrop.open{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.sheet{
+  width:100%;max-width:560px;
+  background:var(--bg-elev);border-radius:18px 18px 0 0;
+  border-top:1px solid var(--border);
+  padding:16px 16px calc(20px + var(--safe-b));
+  max-height:90vh;overflow-y:auto;
+  animation:slideUp .25s cubic-bezier(.2,.7,.2,1);
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:4px auto 14px}
+.sheet h2{font-size:20px;margin-bottom:10px}
+
+/* ---------- Toast ---------- */
+.toast{
+  position:fixed;top:calc(var(--safe-t) + 12px);left:50%;transform:translateX(-50%);
+  background:var(--bg-elev);border:1px solid var(--border);
+  padding:12px 18px;border-radius:12px;font-weight:600;
+  z-index:200;box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+}
+.toast.show{opacity:1;transform:translate(-50%,8px)}
+.toast.up{border-color:var(--green);color:var(--green)}
+.toast.down{border-color:var(--red);color:var(--red)}
+
+/* ---------- Stat grid ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--bg-elev-2);border-radius:var(--radius-sm);padding:12px}
+.stat-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.stat-value{font-size:18px;font-weight:700;margin-top:4px}
+
+/* ---------- Progress bar ---------- */
+.progress{height:10px;background:var(--bg-elev-2);border-radius:6px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .5s ease}
+
+/* ---------- Chart container ---------- */
+.chart-wrap{position:relative;height:220px;width:100%}
+.chart-wrap.lg{height:260px}
+
+/* ---------- Mood badge ---------- */
+.mood{padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.mood.bullish{background:var(--green-bg);color:var(--green)}
+.mood.bearish{background:var(--red-bg);color:var(--red)}
+.mood.choppy{background:rgba(255,212,126,.15);color:var(--yellow)}
+.mood.quiet{background:var(--bg-elev-2);color:var(--text-dim)}
+
+/* ---------- Toggle ---------- */
+.toggle{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
+.toggle:last-child{border-bottom:0}
+.toggle-text{flex:1}
+.toggle-label{font-weight:600}
+.toggle-desc{font-size:12px;color:var(--text-dim);margin-top:2px}
+.switch{
+  position:relative;width:46px;height:26px;background:var(--bg-elev-2);
+  border:1px solid var(--border);border-radius:999px;cursor:pointer;
+  transition:background .2s;flex-shrink:0;
+}
+.switch::after{
+  content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;
+  background:var(--text-dim);border-radius:50%;transition:.2s;
+}
+.switch.on{background:var(--green-bg);border-color:var(--green)}
+.switch.on::after{transform:translateX(20px);background:var(--green)}
+
+/* ---------- Journal entries ---------- */
+.journal-entry{
+  background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;margin-bottom:10px;
+}
+.journal-meta{font-size:12px;color:var(--text-dim);margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.journal-body{white-space:pre-wrap;word-break:break-word}
+
+/* ---------- Disclaimer banner ---------- */
+.disclaimer-banner{
+  background:rgba(255,212,126,.10);
+  border:1px solid rgba(255,212,126,.4);
+  color:var(--yellow);
+  padding:10px 12px;border-radius:var(--radius-sm);
+  font-size:12px;margin-bottom:12px;
+}
+
+/* ---------- Empty state ---------- */
+.empty{
+  text-align:center;padding:40px 20px;color:var(--text-dim);
+}
+.empty-icon{font-size:48px;margin-bottom:10px;opacity:.5}
+.empty-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+
+/* ---------- Confetti ---------- */
+.confetti{position:fixed;top:-10px;width:8px;height:14px;z-index:300;pointer-events:none}
+
+/* ---------- Tablet landscape ---------- */
+@media (min-width:760px) and (orientation:landscape){
+  .view-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  .stat-grid{grid-template-columns:repeat(4,1fr)}
+}
+
+/* ---------- Number count animation ---------- */
+.num-anim{display:inline-block;transition:color .3s}
+.flash-up{animation:flashUp .8s ease}
+.flash-down{animation:flashDown .8s ease}
+@keyframes flashUp{0%{color:var(--green);text-shadow:0 0 12px var(--green)}100%{}}
+@keyframes flashDown{0%{color:var(--red);text-shadow:0 0 12px var(--red)}100%{}}
+
+/* ---------- Badge ---------- */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;
+  background:var(--bg-elev-2);border:1px solid var(--border);
+  font-size:13px;font-weight:600;
+}
+.badge.unlocked{background:linear-gradient(135deg,rgba(124,255,203,.2),rgba(75,184,255,.2));border-color:var(--accent)}
+
+/* ---------- Loading ---------- */
+.spinner{
+  width:18px;height:18px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-row{display:flex;align-items:center;gap:10px;color:var(--text-dim);padding:14px}
+
+/* ---------- Trade list ---------- */
+.trade-row{
+  display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.trade-row:last-child{border-bottom:0}
+.trade-action{font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.trade-action.buy{color:var(--green)}
+.trade-action.sell{color:var(--red)}
+
+/* ---------- Settings link rows ---------- */
+.link-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;
+}
+.link-row:last-child{border-bottom:0}
+.link-row .chev{color:var(--text-faint);font-size:18px}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ====================== PORTFOLIO ====================== -->
+  <section id="view-portfolio" class="view active">
+    <div class="view-header">
+      <div>
+        <div class="view-title">Portfolio</div>
+        <div class="view-sub" id="portfolio-streak">Daily dream tracker</div>
+      </div>
+      <button class="btn btn-ghost" id="btn-currency-toggle" style="padding:8px 12px;min-height:36px;font-size:13px">AUD</button>
+    </div>
+
+    <div id="morning-summary"></div>
+
+    <div class="card">
+      <div class="card-title">Total Value</div>
+      <div class="hero-value" id="total-value">$0.00</div>
+      <div class="hero-change" id="total-change">—</div>
+      <div class="stat-grid" style="margin-top:14px">
+        <div class="stat"><div class="stat-label">Cash</div><div class="stat-value" id="stat-cash">$0.00</div></div>
+        <div class="stat"><div class="stat-label">Invested</div><div class="stat-value" id="stat-invested">$0.00</div></div>
+        <div class="stat"><div class="stat-label">P/L All Time</div><div class="stat-value" id="stat-pl">$0.00</div></div>
+        <div class="stat"><div class="stat-label">Days In</div><div class="stat-value" id="stat-days">0</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-row" style="margin-bottom:8px">
+        <div class="card-title">All-Time</div>
+        <div id="portfolio-chart-range" class="tiny muted">From day one</div>
+      </div>
+      <div class="chart-wrap"><canvas id="portfolio-chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-row" style="margin-bottom:10px">
+        <div class="card-title">Holdings</div>
+        <button class="btn btn-ghost tiny" id="btn-add-coin" style="padding:6px 10px;min-height:32px">+ Buy</button>
+      </div>
+      <div id="holdings-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-row" style="margin-bottom:10px">
+        <div class="card-title">Recent Trades</div>
+      </div>
+      <div id="recent-trades"></div>
+    </div>
+  </section>
+
+  <!-- ====================== MARKET ====================== -->
+  <section id="view-market" class="view">
+    <div class="view-header">
+      <div>
+        <div class="view-title">Market</div>
+        <div class="view-sub" id="market-mood-line">Loading…</div>
+      </div>
+      <button class="btn btn-ghost" id="btn-refresh" style="padding:8px 12px;min-height:36px;font-size:13px">↻</button>
+    </div>
+
+    <div class="bar">
+      <input type="text" id="coin-search" placeholder="Search Bitcoin, ETH, SOL…" autocomplete="off">
+    </div>
+
+    <div class="tabs-pills">
+      <button class="pill active" data-mfilter="all">All Top 50</button>
+      <button class="pill" data-mfilter="fav">Favourites</button>
+      <button class="pill" data-mfilter="watch">Watchlist</button>
+      <button class="pill" data-mfilter="gainers">Gainers</button>
+      <button class="pill" data-mfilter="losers">Losers</button>
+      <button class="pill" data-mfilter="trending">Trending</button>
+    </div>
+
+    <div id="market-list" class="coin-list">
+      <div class="loading-row"><div class="spinner"></div> Fetching live prices…</div>
+    </div>
+  </section>
+
+  <!-- ====================== DREAM ====================== -->
+  <section id="view-dream" class="view">
+    <div class="view-header">
+      <div>
+        <div class="view-title">Dream</div>
+        <div class="view-sub">Fantasy projections — not advice</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Goal</div>
+      <div id="goal-display"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">Compound Forecast</div>
+      <div class="tiny muted" id="forecast-rate">Based on rolling 30-day return.</div>
+      <div class="chart-wrap lg" style="margin-top:10px"><canvas id="forecast-chart"></canvas></div>
+      <div class="stat-grid" style="margin-top:12px">
+        <div class="stat"><div class="stat-label">1 Year</div><div class="stat-value" id="fc-1y">—</div></div>
+        <div class="stat"><div class="stat-label">5 Years</div><div class="stat-value" id="fc-5y">—</div></div>
+        <div class="stat"><div class="stat-label">10 Years</div><div class="stat-value" id="fc-10y">—</div></div>
+        <div class="stat"><div class="stat-label">Daily Rate</div><div class="stat-value" id="fc-daily">—</div></div>
+      </div>
+      <div class="tiny faint" style="margin-top:10px">Three lines: pessimistic (½× rate), realistic (your rate), dream (2× rate). Pure fantasy projection — markets do not move in straight lines.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">What-If Calculator</div>
+      <label class="tiny muted">If I'd put $100 in…</label>
+      <select id="whatif-coin" style="margin-top:6px"></select>
+      <label class="tiny muted" style="display:block;margin-top:10px">…on this date</label>
+      <input type="date" id="whatif-date" style="margin-top:6px">
+      <button class="btn btn-primary btn-block" id="btn-whatif" style="margin-top:12px">Calculate</button>
+      <div id="whatif-result" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">Streak & Badges</div>
+      <div id="streak-display"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">Challenges</div>
+      <div id="challenges-list"></div>
+    </div>
+  </section>
+
+  <!-- ====================== JOURNAL ====================== -->
+  <section id="view-journal" class="view">
+    <div class="view-header">
+      <div>
+        <div class="view-title">Journal</div>
+        <div class="view-sub">Capture today's thinking</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <textarea id="journal-input" rows="3" placeholder="What's on your mind today? Market thoughts, plans, regrets…"></textarea>
+      <button class="btn btn-primary btn-block" id="btn-journal-save" style="margin-top:10px">Save Entry</button>
+    </div>
+
+    <div class="bar">
+      <input type="text" id="journal-search" placeholder="Search your notes…">
+    </div>
+
+    <div id="journal-list"></div>
+  </section>
+
+  <!-- ====================== SETTINGS ====================== -->
+  <section id="view-settings" class="view">
+    <div class="view-header">
+      <div>
+        <div class="view-title">Settings</div>
+        <div class="view-sub" id="settings-mode-line">Mode: Pure Dream</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">Display</div>
+      <div class="toggle">
+        <div class="toggle-text">
+          <div class="toggle-label">Light mode</div>
+          <div class="toggle-desc">Dark by default. Toggle for daytime.</div>
+        </div>
+        <div class="switch" id="sw-light"></div>
+      </div>
+      <div class="toggle">
+        <div class="toggle-text">
+          <div class="toggle-label">USD instead of AUD</div>
+          <div class="toggle-desc">Show prices in US dollars.</div>
+        </div>
+        <div class="switch" id="sw-usd"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">Trading Mode</div>
+      <div class="toggle">
+        <div class="toggle-text">
+          <div class="toggle-label">Realistic mode</div>
+          <div class="toggle-desc">0.5% fee + 0.1% spread per trade.</div>
+        </div>
+        <div class="switch" id="sw-realistic"></div>
+      </div>
+      <div class="toggle">
+        <div class="toggle-text">
+          <div class="toggle-label">Daily DCA drip</div>
+          <div class="toggle-desc">Auto-buy $1 of a chosen coin daily.</div>
+        </div>
+        <div class="switch" id="sw-dca"></div>
+      </div>
+      <div id="dca-coin-wrap" style="display:none;margin-top:8px">
+        <label class="tiny muted">DCA coin</label>
+        <select id="dca-coin" style="margin-top:4px"></select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">Goal</div>
+      <label class="tiny muted">Target portfolio value</label>
+      <div class="tabs-pills" style="margin-top:8px;margin-bottom:0">
+        <button class="pill" data-goal="500">$500</button>
+        <button class="pill" data-goal="1000">$1k</button>
+        <button class="pill" data-goal="10000">$10k</button>
+        <button class="pill" data-goal="100000">$100k</button>
+        <button class="pill" data-goal="1000000">$1M</button>
+      </div>
+      <input type="number" id="goal-custom" placeholder="Or custom amount" style="margin-top:8px">
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">Data</div>
+      <div class="link-row" id="link-export"><span>Export JSON</span><span class="chev">›</span></div>
+      <div class="link-row" id="link-export-csv"><span>Export trades as CSV</span><span class="chev">›</span></div>
+      <div class="link-row" id="link-import"><span>Import from JSON</span><span class="chev">›</span></div>
+      <input type="file" id="import-file" accept="application/json" style="display:none">
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">Danger Zone</div>
+      <button class="btn btn-block" id="btn-reset" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red)">Reset Dream</button>
+      <div class="tiny faint" style="margin-top:8px">Wipes portfolio, trades, journal & streak. Starts again at $100.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px">About</div>
+      <div class="tiny muted" style="line-height:1.6">
+        <strong style="color:var(--text)">Hundred Dollar Dream</strong> — paper-trading simulator. No real money, no exchange connections. All prices from CoinGecko's free public API; data may be delayed. This is not financial advice. Past performance is not future performance. Your dreams are your own.
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ====================== BOTTOM TAB BAR ====================== -->
+<nav class="tabbar">
+  <button class="tab active" data-view="portfolio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    <span>Portfolio</span>
+  </button>
+  <button class="tab" data-view="market">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+    <span>Market</span>
+  </button>
+  <button class="tab" data-view="dream">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <span>Dream</span>
+  </button>
+  <button class="tab" data-view="journal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span>Journal</span>
+  </button>
+  <button class="tab" data-view="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<!-- ====================== SHEET (modal) ====================== -->
+<div class="sheet-backdrop" id="sheet">
+  <div class="sheet" id="sheet-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   HUNDRED DOLLAR DREAM
+   Single-file PWA. Vanilla JS. CoinGecko free public API + Chart.js.
+   Sections: PWA wrapper, state, API, helpers, UI render, event wiring.
+   ========================================================================= */
+
+/* ---------- PWA: inline manifest + service worker ---------- */
+(function setupPWA(){
+  const manifest = {
+    name:"Hundred Dollar Dream",
+    short_name:"$100 Dream",
+    description:"A daydreamer's crypto paper-trading app.",
+    start_url:".",
+    display:"standalone",
+    orientation:"portrait",
+    background_color:"#0b0d12",
+    theme_color:"#0b0d12",
+    icons:[
+      {src:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237CFFCB'/><stop offset='1' stop-color='%234BB8FF'/></linearGradient></defs><rect width='192' height='192' rx='42' fill='%230b0d12'/><text x='96' y='120' font-size='84' font-family='system-ui' font-weight='700' text-anchor='middle' fill='url(%23g)'>$100</text></svg>",sizes:"192x192",type:"image/svg+xml",purpose:"any"},
+      {src:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237CFFCB'/><stop offset='1' stop-color='%234BB8FF'/></linearGradient></defs><rect width='512' height='512' rx='112' fill='%230b0d12'/><text x='256' y='320' font-size='220' font-family='system-ui' font-weight='700' text-anchor='middle' fill='url(%23g)'>$100</text></svg>",sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}
+    ]
+  };
+  const manifestBlob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  document.getElementById('manifest-link').href = URL.createObjectURL(manifestBlob);
+
+  if('serviceWorker' in navigator){
+    const swCode = `
+      const CACHE='hdd-v1';
+      self.addEventListener('install',e=>{self.skipWaiting()});
+      self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
+      self.addEventListener('fetch',e=>{
+        const u=e.request.url;
+        // Network-first for CoinGecko (with cache fallback), cache-first for everything else
+        if(u.includes('coingecko.com')){
+          e.respondWith(
+            fetch(e.request).then(r=>{
+              const clone=r.clone();
+              caches.open(CACHE).then(c=>c.put(e.request,clone));
+              return r;
+            }).catch(()=>caches.match(e.request))
+          );
+        } else {
+          e.respondWith(
+            caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{
+              if(resp.ok && e.request.method==='GET'){
+                const clone=resp.clone();
+                caches.open(CACHE).then(c=>c.put(e.request,clone));
+              }
+              return resp;
+            }).catch(()=>r))
+          );
+        }
+      });
+    `;
+    const swBlob = new Blob([swCode],{type:'application/javascript'});
+    const swUrl = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{/* fine if it fails on file:// */});
+  }
+})();
+
+/* ---------- State (localStorage) ---------- */
+const STORAGE_KEY = 'hdd_v1';
+const DEFAULT_STATE = {
+  version:1,
+  createdAt: Date.now(),
+  startingBalance: 100,
+  cash: 100,
+  holdings: {},                  // {coinId: {amount, costBasisAud}}
+  trades: [],                    // {id, ts, type, coinId, symbol, name, coinAmount, price, audAmount, fee}
+  journal: [],                   // {id, ts, text, tradeId?}
+  favourites: ['bitcoin','ethereum'],
+  watchlist: [],
+  alerts: [],                    // {coinId, op:'above'|'below', price, triggered}
+  portfolioHistory: [],          // [{ts, value}]
+  streak: { current:0, best:0, lastOpenDay:null, milestones:[] },
+  goal: 1000,
+  settings: {
+    currency: 'aud',            // 'aud' | 'usd'
+    light: false,
+    realistic: false,
+    dca: { enabled:false, coinId:'bitcoin', lastRun:null, dailyAmount:1 }
+  },
+  challenges: [],                // active challenge runs
+  lastSummaryDay: null,
+  lastSeenWelcome: false
+};
+
+let state = loadState();
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return structuredClone(DEFAULT_STATE);
+    const parsed = JSON.parse(raw);
+    // shallow merge defaults to backfill new fields
+    return { ...structuredClone(DEFAULT_STATE), ...parsed,
+      settings:{...DEFAULT_STATE.settings, ...(parsed.settings||{}),
+        dca:{...DEFAULT_STATE.settings.dca, ...((parsed.settings||{}).dca||{})}},
+      streak:{...DEFAULT_STATE.streak, ...(parsed.streak||{})}
+    };
+  }catch(e){ return structuredClone(DEFAULT_STATE); }
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+/* ---------- Helpers ---------- */
+const fmt = (n, cur=state.settings.currency) => {
+  if(n==null||isNaN(n)) return '—';
+  const sym = cur==='usd'?'US$':'$';
+  const abs = Math.abs(n);
+  let digits = abs<1 ? 4 : abs<100 ? 2 : 2;
+  if(abs>=1e9) return sym+(n/1e9).toFixed(2)+'B';
+  if(abs>=1e6) return sym+(n/1e6).toFixed(2)+'M';
+  return sym + n.toLocaleString(undefined,{minimumFractionDigits:digits,maximumFractionDigits:digits});
+};
+const fmtPct = (n) => (n==null||isNaN(n))?'—':(n>=0?'+':'')+n.toFixed(2)+'%';
+const fmtCoin = (n) => n==null?'—':n.toLocaleString(undefined,{maximumFractionDigits:8});
+const todayKey = () => new Date().toISOString().slice(0,10);
+const daysBetween = (a,b) => Math.floor((b-a)/86400000);
+const escapeHTML = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+
+function toast(msg, kind=''){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show '+(kind||'');
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>{ t.className='toast'; }, 2400);
+}
+
+/* ---------- CoinGecko API with cache + retry ---------- */
+const CG_BASE = 'https://api.coingecko.com/api/v3';
+const apiCache = new Map(); // key -> {ts, data}
+const CACHE_MS = 60000;
+
+async function cgFetch(path, params={}, cacheMs=CACHE_MS){
+  const q = new URLSearchParams(params).toString();
+  const url = CG_BASE + path + (q?('?'+q):'');
+  const now = Date.now();
+  const cacheKey = url;
+  const cached = apiCache.get(cacheKey);
+  if(cached && (now - cached.ts) < cacheMs) return cached.data;
+  // also try localStorage cache for offline
+  const lsKey = 'hdd_cache:'+cacheKey;
+  try{
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data = await resp.json();
+    apiCache.set(cacheKey,{ts:now,data});
+    try{ localStorage.setItem(lsKey, JSON.stringify({ts:now,data})); }catch(e){}
+    return data;
+  }catch(e){
+    // fall back to localStorage cached copy
+    const stale = localStorage.getItem(lsKey);
+    if(stale){
+      try{ const parsed = JSON.parse(stale); apiCache.set(cacheKey,parsed); return parsed.data; }catch(_){}
+    }
+    if(cached) return cached.data;
+    throw e;
+  }
+}
+
+async function getTopCoins(){
+  return cgFetch('/coins/markets', {
+    vs_currency: state.settings.currency,
+    order: 'market_cap_desc',
+    per_page: 50,
+    page: 1,
+    sparkline: false,
+    price_change_percentage: '24h'
+  });
+}
+async function getPrices(ids){
+  if(!ids||!ids.length) return {};
+  return cgFetch('/simple/price', {
+    ids: ids.join(','),
+    vs_currencies: state.settings.currency,
+    include_24hr_change: true
+  });
+}
+async function getMarketChart(id, days){
+  return cgFetch('/coins/'+id+'/market_chart', {
+    vs_currency: state.settings.currency,
+    days
+  }, 5*60*1000);
+}
+async function getTrending(){
+  return cgFetch('/search/trending', {}, 10*60*1000);
+}
+async function searchCoins(q){
+  return cgFetch('/search', {query:q}, 5*60*1000);
+}
+async function getHistoryOnDate(coinId, dateStr){
+  // dateStr: YYYY-MM-DD -> CoinGecko wants DD-MM-YYYY
+  const [y,m,d] = dateStr.split('-');
+  return cgFetch('/coins/'+coinId+'/history', {date:`${d}-${m}-${y}`}, 7*86400000);
+}
+
+/* ---------- Market data cache (top coins kept globally) ---------- */
+let topCoins = [];
+let topCoinsById = {};
+let livePricesById = {};   // {coinId: {price, change24h}}
+
+async function refreshMarket(){
+  try{
+    const list = await getTopCoins();
+    topCoins = list || [];
+    topCoinsById = {};
+    list.forEach(c => topCoinsById[c.id] = c);
+    // hydrate livePrices for held + watched + favs
+    const need = new Set([...Object.keys(state.holdings), ...state.favourites, ...state.watchlist, ...state.alerts.map(a=>a.coinId), state.settings.dca.coinId]);
+    list.forEach(c => need.add(c.id));
+    const extras = [...need].filter(id => !topCoinsById[id]);
+    if(extras.length){
+      const px = await getPrices(extras);
+      for(const id of extras){
+        if(px[id]){
+          livePricesById[id] = { price: px[id][state.settings.currency], change24h: px[id][state.settings.currency+'_24h_change'] };
+        }
+      }
+    }
+    list.forEach(c => {
+      livePricesById[c.id] = { price: c.current_price, change24h: c.price_change_percentage_24h, image:c.image, symbol:c.symbol, name:c.name };
+    });
+    return true;
+  }catch(e){
+    console.warn('Market refresh failed', e);
+    toast('Offline — showing cached prices','down');
+    return false;
+  }
+}
+
+/* ---------- Portfolio math ---------- */
+function getCoinPrice(id){
+  return livePricesById[id]?.price ?? null;
+}
+function getCoinMeta(id){
+  return topCoinsById[id] || livePricesById[id] || null;
+}
+function totalInvested(){
+  let inv=0;
+  for(const id in state.holdings){
+    const h = state.holdings[id];
+    const px = getCoinPrice(id);
+    if(px==null) inv += h.costBasisAud || 0;
+    else inv += h.amount * px;
+  }
+  return inv;
+}
+function totalValue(){ return state.cash + totalInvested(); }
+function totalPL(){ return totalValue() - state.startingBalance; }
+function totalPLPct(){ return (totalPL() / state.startingBalance)*100; }
+
+function snapshotPortfolio(){
+  const v = totalValue();
+  const hist = state.portfolioHistory;
+  const today = todayKey();
+  const last = hist[hist.length-1];
+  if(!last || last.day !== today){
+    hist.push({day:today, ts:Date.now(), value:v});
+    // keep at most ~5 years of daily points
+    if(hist.length>2000) hist.shift();
+  } else {
+    last.value = v;
+    last.ts = Date.now();
+  }
+  saveState();
+}
+
+/* ---------- Buy / Sell ---------- */
+function executeTrade({coinId, type, audAmount, coinAmount, note}){
+  const meta = getCoinMeta(coinId);
+  const live = getCoinPrice(coinId);
+  if(!meta || !live){ toast('Price unavailable','down'); return false; }
+  let price = live;
+  // realistic: 0.1% spread
+  if(state.settings.realistic){
+    price = type==='buy' ? price*1.001 : price*0.999;
+  }
+  let aud, coin;
+  if(audAmount!=null){
+    aud = parseFloat(audAmount);
+    if(!(aud>0)){ toast('Enter an amount','down'); return false; }
+    coin = aud / price;
+  } else {
+    coin = parseFloat(coinAmount);
+    if(!(coin>0)){ toast('Enter an amount','down'); return false; }
+    aud = coin * price;
+  }
+  const fee = state.settings.realistic ? aud*0.005 : 0;
+  if(type==='buy'){
+    const total = aud + fee;
+    if(total > state.cash + 1e-9){ toast('Not enough cash','down'); return false; }
+    state.cash -= total;
+    const h = state.holdings[coinId] || {amount:0, costBasisAud:0};
+    h.amount += coin;
+    h.costBasisAud += aud; // ex-fee cost basis
+    state.holdings[coinId] = h;
+  } else {
+    const h = state.holdings[coinId];
+    if(!h || h.amount < coin - 1e-9){ toast('Not enough to sell','down'); return false; }
+    state.cash += aud - fee;
+    // proportionally reduce cost basis
+    const sellRatio = coin / h.amount;
+    h.costBasisAud *= (1 - sellRatio);
+    h.amount -= coin;
+    if(h.amount < 1e-10){ delete state.holdings[coinId]; }
+    else state.holdings[coinId] = h;
+  }
+  const trade = {
+    id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    ts: Date.now(),
+    type, coinId,
+    symbol: (meta.symbol||'').toUpperCase(),
+    name: meta.name||coinId,
+    coinAmount: coin,
+    price,
+    audAmount: aud,
+    fee
+  };
+  state.trades.unshift(trade);
+  if(note && note.trim()){
+    state.journal.unshift({id:Date.now()+'-j', ts:Date.now(), text:note.trim(), tradeId:trade.id});
+  }
+  snapshotPortfolio();
+  saveState();
+  toast(`${type==='buy'?'Bought':'Sold'} ${fmtCoin(coin)} ${trade.symbol}`, type==='buy'?'up':'down');
+  checkGoal();
+  return true;
+}
+
+/* ---------- Streak / daily summary ---------- */
+function tickStreak(){
+  const today = todayKey();
+  const last = state.streak.lastOpenDay;
+  if(last === today) return;
+  if(!last){
+    state.streak.current = 1;
+  } else {
+    const diff = daysBetween(new Date(last).getTime(), new Date(today).getTime());
+    if(diff===1) state.streak.current += 1;
+    else if(diff>1) state.streak.current = 1;
+  }
+  state.streak.lastOpenDay = today;
+  if(state.streak.current > state.streak.best) state.streak.best = state.streak.current;
+  const milestones = [7,30,100,365];
+  milestones.forEach(m=>{
+    if(state.streak.current >= m && !state.streak.milestones.includes(m)){
+      state.streak.milestones.push(m);
+      setTimeout(()=>{ confetti(); toast(`🏆 ${m}-day streak!`,'up'); }, 800);
+    }
+  });
+  saveState();
+}
+
+/* ---------- DCA daily drip ---------- */
+function runDCA(){
+  if(!state.settings.dca.enabled) return;
+  const today = todayKey();
+  if(state.settings.dca.lastRun === today) return;
+  const coinId = state.settings.dca.coinId;
+  const px = getCoinPrice(coinId);
+  if(!px) return;
+  const amt = state.settings.dca.dailyAmount || 1;
+  if(state.cash < amt) return;
+  executeTrade({coinId, type:'buy', audAmount: amt});
+  state.settings.dca.lastRun = today;
+  saveState();
+}
+
+/* ---------- Goal / confetti ---------- */
+let goalReachedFlag = false;
+function checkGoal(){
+  const v = totalValue();
+  if(v >= state.goal && !goalReachedFlag){
+    goalReachedFlag = true;
+    confetti();
+    toast('🎉 Goal reached!','up');
+  }
+}
+function confetti(){
+  const colors = ['#7CFFCB','#4BB8FF','#ffd47e','#ff7a8a','#5ee6a8'];
+  for(let i=0;i<60;i++){
+    const el = document.createElement('div');
+    el.className='confetti';
+    el.style.left = Math.random()*100+'%';
+    el.style.background = colors[i%colors.length];
+    el.style.transform = `rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(el);
+    const dx = (Math.random()-.5)*400;
+    const dy = window.innerHeight + 40;
+    const dur = 1500 + Math.random()*1500;
+    el.animate([
+      {transform:`translate(0,0) rotate(0)`,opacity:1},
+      {transform:`translate(${dx}px,${dy}px) rotate(${720}deg)`,opacity:0}
+    ],{duration:dur, easing:'cubic-bezier(.4,0,.6,1)'}).onfinish = ()=>el.remove();
+  }
+}
+
+/* ---------- Morning summary ---------- */
+function renderMorningSummary(){
+  const el = document.getElementById('morning-summary');
+  const today = todayKey();
+  // mood from top 10 average change
+  const top10 = topCoins.slice(0,10);
+  const avg = top10.length ? top10.reduce((s,c)=>s+(c.price_change_percentage_24h||0),0)/top10.length : 0;
+  let mood='Quiet', moodClass='quiet';
+  const absAvg = Math.abs(avg);
+  if(absAvg < 0.6){ mood='Quiet'; moodClass='quiet'; }
+  else if(avg >= 2){ mood='Bullish'; moodClass='bullish'; }
+  else if(avg <= -2){ mood='Bearish'; moodClass='bearish'; }
+  else { mood='Choppy'; moodClass='choppy'; }
+  document.getElementById('market-mood-line').innerHTML = `Mood: <span class="mood ${moodClass}">${mood}</span> · Top 10 avg ${fmtPct(avg)}`;
+
+  if(state.lastSummaryDay === today){ el.innerHTML=''; return; }
+
+  // top gainer / loser within portfolio
+  const heldIds = Object.keys(state.holdings);
+  let topG=null, topL=null;
+  heldIds.forEach(id=>{
+    const ch = livePricesById[id]?.change24h;
+    if(ch==null) return;
+    if(!topG || ch > topG.ch) topG={id,ch};
+    if(!topL || ch < topL.ch) topL={id,ch};
+  });
+  const last = state.portfolioHistory.length>=2 ? state.portfolioHistory[state.portfolioHistory.length-2] : null;
+  const todayVal = totalValue();
+  const dayChange = last ? (todayVal - last.value) : 0;
+  const dayPct = last && last.value>0 ? (dayChange/last.value*100) : 0;
+
+  let inner = `
+    <div class="card" style="background:linear-gradient(135deg,rgba(124,255,203,.08),rgba(75,184,255,.08));border-color:var(--accent-2)">
+      <div class="card-row" style="margin-bottom:8px">
+        <div class="card-title" style="color:var(--accent)">Good Morning</div>
+        <span class="mood ${moodClass}">${mood}</span>
+      </div>
+      <div style="font-size:14px;color:var(--text-dim)">Overnight change</div>
+      <div style="font-size:24px;font-weight:700;margin-top:2px" class="${dayChange>=0?'up':'down'}">${dayChange>=0?'+':''}${fmt(dayChange)} <span style="font-size:14px">(${fmtPct(dayPct)})</span></div>
+  `;
+  if(topG && topL && topG.id!==topL.id){
+    const gMeta = getCoinMeta(topG.id), lMeta = getCoinMeta(topL.id);
+    inner += `
+      <div class="stat-grid" style="margin-top:12px">
+        <div class="stat"><div class="stat-label">Your top gainer</div><div class="stat-value up">${escapeHTML(gMeta?.symbol?.toUpperCase()||topG.id)}</div><div class="tiny up">${fmtPct(topG.ch)}</div></div>
+        <div class="stat"><div class="stat-label">Your top loser</div><div class="stat-value down">${escapeHTML(lMeta?.symbol?.toUpperCase()||topL.id)}</div><div class="tiny down">${fmtPct(topL.ch)}</div></div>
+      </div>`;
+  }
+  inner += `<button class="btn btn-block btn-ghost" id="dismiss-summary" style="margin-top:12px">Got it</button></div>`;
+  el.innerHTML = inner;
+  document.getElementById('dismiss-summary').onclick = ()=>{
+    state.lastSummaryDay = today; saveState();
+    el.innerHTML = '';
+  };
+}
+
+/* ---------- Render: Portfolio ---------- */
+let portfolioChart;
+function renderPortfolio(){
+  // streak line
+  const s = state.streak;
+  document.getElementById('portfolio-streak').textContent =
+    s.current>0 ? `🔥 ${s.current}-day streak · Best ${s.best}` : 'Open daily to build a streak';
+
+  // hero
+  const v = totalValue();
+  const prev = state.portfolioHistory.length>=2 ? state.portfolioHistory[state.portfolioHistory.length-2].value : state.startingBalance;
+  const ch = v - prev, pct = prev>0 ? (ch/prev*100) : 0;
+  setNumber('total-value', fmt(v), ch);
+  const totalCh = totalPL(), totalChPct = totalPLPct();
+  document.getElementById('total-change').innerHTML =
+    `<span class="${ch>=0?'up':'down'}">${ch>=0?'▲':'▼'} ${fmt(Math.abs(ch))} today (${fmtPct(pct)})</span> · <span class="${totalCh>=0?'up':'down'}">${totalCh>=0?'+':''}${fmt(totalCh)} all-time (${fmtPct(totalChPct)})</span>`;
+
+  document.getElementById('stat-cash').textContent = fmt(state.cash);
+  document.getElementById('stat-invested').textContent = fmt(totalInvested());
+  const pl = totalPL();
+  const plEl = document.getElementById('stat-pl');
+  plEl.textContent = (pl>=0?'+':'')+fmt(pl);
+  plEl.className = 'stat-value ' + (pl>=0?'up':'down');
+  const days = state.portfolioHistory.length ? Math.max(1, daysBetween(state.portfolioHistory[0].ts, Date.now())+1) : 1;
+  document.getElementById('stat-days').textContent = days;
+
+  // holdings
+  const hl = document.getElementById('holdings-list');
+  const ids = Object.keys(state.holdings);
+  if(!ids.length){
+    hl.innerHTML = `<div class="empty"><div class="empty-icon">💭</div><div class="empty-title">No coins yet</div><div class="tiny">Tap Buy and pick a coin to start the dream.</div></div>`;
+  } else {
+    hl.innerHTML = '<div class="coin-list">'+ids.map(id=>{
+      const h = state.holdings[id];
+      const meta = getCoinMeta(id);
+      const px = getCoinPrice(id);
+      const val = px!=null ? h.amount*px : null;
+      const pl = val!=null ? val - h.costBasisAud : null;
+      const plPct = pl!=null && h.costBasisAud>0 ? (pl/h.costBasisAud*100) : null;
+      const img = meta?.image ? `<img src="${meta.image}" alt="">` : (meta?.symbol||'?').slice(0,2).toUpperCase();
+      return `<div class="coin-row" data-coin="${id}">
+        <div class="coin-img">${img}</div>
+        <div>
+          <div class="coin-name">${escapeHTML(meta?.name||id)}</div>
+          <div class="coin-sym">${fmtCoin(h.amount)} ${escapeHTML((meta?.symbol||'').toUpperCase())} @ ${px!=null?fmt(px):'—'}</div>
+        </div>
+        <div class="coin-price">
+          <div class="px">${val!=null?fmt(val):'—'}</div>
+          <div class="ch ${pl==null?'flat':(pl>=0?'up':'down')}">${pl!=null?(pl>=0?'+':'')+fmt(pl)+' · '+fmtPct(plPct):'—'}</div>
+        </div>
+      </div>`;
+    }).join('')+'</div>';
+    hl.querySelectorAll('.coin-row').forEach(r=>r.onclick=()=>openCoinSheet(r.dataset.coin));
+  }
+
+  // recent trades
+  const rt = document.getElementById('recent-trades');
+  if(!state.trades.length){
+    rt.innerHTML = '<div class="empty tiny">No trades yet.</div>';
+  } else {
+    rt.innerHTML = state.trades.slice(0,6).map(t=>{
+      return `<div class="trade-row">
+        <div>
+          <div><span class="trade-action ${t.type}">${t.type}</span> ${escapeHTML(t.symbol)} <span class="muted tiny">${new Date(t.ts).toLocaleString()}</span></div>
+          <div class="tiny muted">${fmtCoin(t.coinAmount)} @ ${fmt(t.price)}${t.fee?` · fee ${fmt(t.fee)}`:''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:600">${fmt(t.audAmount)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  renderPortfolioChart();
+  renderMorningSummary();
+}
+
+function renderPortfolioChart(){
+  const ctx = document.getElementById('portfolio-chart').getContext('2d');
+  const hist = state.portfolioHistory.length ? state.portfolioHistory : [{day:todayKey(),ts:Date.now(),value:state.startingBalance}];
+  const labels = hist.map(p=>p.day);
+  const data = hist.map(p=>p.value);
+
+  // mark days with big trades
+  const tradeDays = {};
+  state.trades.forEach(t=>{
+    const d = new Date(t.ts).toISOString().slice(0,10);
+    tradeDays[d] = (tradeDays[d]||0) + t.audAmount;
+  });
+  const pointColors = labels.map(d => tradeDays[d] ? (tradeDays[d]>20 ? getCSS('--accent') : getCSS('--accent-2')) : 'transparent');
+  const pointRadii = labels.map(d => tradeDays[d] ? 5 : 0);
+
+  if(portfolioChart) portfolioChart.destroy();
+  portfolioChart = new Chart(ctx, {
+    type:'line',
+    data:{labels, datasets:[{
+      label:'Portfolio',
+      data,
+      borderColor:getCSS('--accent'),
+      backgroundColor: gradientFill(ctx, getCSS('--accent'), 'rgba(124,255,203,0)'),
+      borderWidth:2,
+      tension:.25,
+      fill:true,
+      pointRadius:pointRadii,
+      pointBackgroundColor:pointColors,
+      pointBorderColor:pointColors,
+      pointHoverRadius:6
+    }]},
+    options:{...chartCommon(), plugins:{...chartCommon().plugins,
+      tooltip:{...chartCommon().plugins.tooltip,
+        callbacks:{
+          label:c=>fmt(c.parsed.y),
+          afterLabel:c=>{
+            const d = c.label;
+            return tradeDays[d] ? '● Trade activity: '+fmt(tradeDays[d]) : '';
+          }
+        }
+      }
+    }}
+  });
+}
+
+/* ---------- Render: Market ---------- */
+let marketFilter='all';
+let searchQuery='';
+let searchResults=null;
+async function renderMarket(){
+  const list = document.getElementById('market-list');
+  list.innerHTML = '<div class="loading-row"><div class="spinner"></div> Loading…</div>';
+  let coins = topCoins.slice();
+
+  if(searchQuery){
+    const q = searchQuery.toLowerCase();
+    const local = coins.filter(c => c.id.includes(q) || (c.symbol||'').toLowerCase().includes(q) || (c.name||'').toLowerCase().includes(q));
+    if(local.length){
+      coins = local;
+    } else {
+      // remote search
+      try{
+        const res = await searchCoins(q);
+        const ids = (res?.coins||[]).slice(0,20).map(c=>c.id);
+        if(ids.length){
+          const px = await getPrices(ids);
+          coins = (res.coins||[]).slice(0,20).map(c=>{
+            const p = px[c.id] || {};
+            return {
+              id:c.id, symbol:c.symbol, name:c.name, image:c.large||c.thumb,
+              current_price: p[state.settings.currency],
+              price_change_percentage_24h: p[state.settings.currency+'_24h_change']
+            };
+          });
+          coins.forEach(c => { livePricesById[c.id] = {price:c.current_price, change24h:c.price_change_percentage_24h, image:c.image, symbol:c.symbol, name:c.name}; topCoinsById[c.id] = topCoinsById[c.id]||c; });
+        } else {
+          coins = [];
+        }
+      }catch(e){ coins=[]; }
+    }
+  } else {
+    if(marketFilter==='fav'){
+      coins = coins.filter(c => state.favourites.includes(c.id));
+      // include non-top-50 favs
+      const missing = state.favourites.filter(id => !coins.find(c=>c.id===id));
+      if(missing.length){
+        try{
+          const px = await getPrices(missing);
+          for(const id of missing){
+            if(px[id]) coins.push({id, name:livePricesById[id]?.name||id, symbol:livePricesById[id]?.symbol||id, image:livePricesById[id]?.image, current_price:px[id][state.settings.currency], price_change_percentage_24h:px[id][state.settings.currency+'_24h_change']});
+          }
+        }catch(e){}
+      }
+    } else if(marketFilter==='watch'){
+      coins = state.watchlist.map(id => topCoinsById[id] || {id, name:livePricesById[id]?.name||id, symbol:livePricesById[id]?.symbol||id, image:livePricesById[id]?.image, current_price:livePricesById[id]?.price, price_change_percentage_24h:livePricesById[id]?.change24h});
+    } else if(marketFilter==='gainers'){
+      coins.sort((a,b)=>(b.price_change_percentage_24h||-Infinity) - (a.price_change_percentage_24h||-Infinity));
+      coins = coins.slice(0,20);
+    } else if(marketFilter==='losers'){
+      coins.sort((a,b)=>(a.price_change_percentage_24h||Infinity) - (b.price_change_percentage_24h||Infinity));
+      coins = coins.slice(0,20);
+    } else if(marketFilter==='trending'){
+      try{
+        const tr = await getTrending();
+        const ids = (tr?.coins||[]).map(c=>c.item.id);
+        const px = await getPrices(ids);
+        coins = (tr.coins||[]).map(c=>({
+          id:c.item.id, name:c.item.name, symbol:c.item.symbol, image:c.item.large||c.item.thumb,
+          current_price:px[c.item.id]?.[state.settings.currency],
+          price_change_percentage_24h:px[c.item.id]?.[state.settings.currency+'_24h_change']
+        }));
+        coins.forEach(c => livePricesById[c.id] = {price:c.current_price, change24h:c.price_change_percentage_24h, image:c.image, symbol:c.symbol, name:c.name});
+      }catch(e){ coins=[]; }
+    }
+  }
+
+  if(!coins.length){
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">Nothing here</div><div class="tiny">Try a different filter or search.</div></div>`;
+    return;
+  }
+  list.innerHTML = coins.map(c=>{
+    const img = c.image ? `<img src="${c.image}" alt="">` : (c.symbol||'?').slice(0,2).toUpperCase();
+    const ch = c.price_change_percentage_24h;
+    return `<div class="coin-row" data-coin="${c.id}">
+      <div class="coin-img">${img}</div>
+      <div>
+        <div class="coin-name">${escapeHTML(c.name)}</div>
+        <div class="coin-sym">${escapeHTML((c.symbol||'').toUpperCase())}${state.favourites.includes(c.id)?' ★':''}${state.watchlist.includes(c.id)?' 👁':''}</div>
+      </div>
+      <div class="coin-price">
+        <div class="px">${c.current_price!=null?fmt(c.current_price):'—'}</div>
+        <div class="ch ${ch==null?'flat':(ch>=0?'up':'down')}">${ch!=null?fmtPct(ch):'—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.coin-row').forEach(r => r.onclick = ()=>openCoinSheet(r.dataset.coin));
+}
+
+/* ---------- Sheet: Coin detail / Buy / Sell ---------- */
+let sheetChart;
+async function openCoinSheet(coinId){
+  const sheet = document.getElementById('sheet');
+  const body = document.getElementById('sheet-body');
+  const meta = getCoinMeta(coinId) || {id:coinId, name:coinId, symbol:coinId};
+  const live = livePricesById[coinId] || {};
+  const held = state.holdings[coinId];
+
+  body.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <div class="coin-img" style="width:44px;height:44px">${meta.image?`<img src="${meta.image}">`:(meta.symbol||'?').slice(0,2).toUpperCase()}</div>
+      <div style="flex:1">
+        <div style="font-size:18px;font-weight:700">${escapeHTML(meta.name||coinId)}</div>
+        <div class="muted tiny">${escapeHTML((meta.symbol||'').toUpperCase())}</div>
+      </div>
+      <button class="btn btn-ghost tiny" id="fav-toggle" style="padding:6px 10px;min-height:32px">${state.favourites.includes(coinId)?'★ Fav':'☆ Fav'}</button>
+      <button class="btn btn-ghost tiny" id="watch-toggle" style="padding:6px 10px;min-height:32px">${state.watchlist.includes(coinId)?'👁 Watching':'+ Watch'}</button>
+    </div>
+    <div class="hero-value" style="font-size:32px">${live.price!=null?fmt(live.price):'—'}</div>
+    <div class="hero-change ${live.change24h>=0?'up':'down'}">${live.change24h!=null?fmtPct(live.change24h)+' · 24h':'—'}</div>
+
+    <div class="tabs-pills" style="margin-top:14px">
+      ${['1','7','30','365','max'].map((d,i)=>`<button class="pill ${i===1?'active':''}" data-range="${d}">${({'1':'24H','7':'7D','30':'30D','365':'1Y','max':'ALL'})[d]}</button>`).join('')}
+    </div>
+    <div class="chart-wrap"><canvas id="coin-chart"></canvas></div>
+
+    ${held ? `
+      <div class="card" style="background:var(--bg-elev-2);margin-top:14px">
+        <div class="card-title">Your holding</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div>
+            <div style="font-weight:600">${fmtCoin(held.amount)} ${escapeHTML((meta.symbol||'').toUpperCase())}</div>
+            <div class="tiny muted">Cost basis ${fmt(held.costBasisAud)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;font-size:18px">${live.price!=null?fmt(held.amount*live.price):'—'}</div>
+            ${(()=>{
+              if(live.price==null) return '';
+              const pl = held.amount*live.price - held.costBasisAud;
+              const pct = held.costBasisAud>0 ? (pl/held.costBasisAud*100) : 0;
+              return `<div class="tiny ${pl>=0?'up':'down'}">${pl>=0?'+':''}${fmt(pl)} · ${fmtPct(pct)}</div>`;
+            })()}
+          </div>
+        </div>
+      </div>
+    `:''}
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-buy" id="btn-buy">Buy</button>
+      <button class="btn btn-sell" id="btn-sell" ${!held?'disabled':''}>Sell</button>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-title" style="margin-bottom:6px">Price alert</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="alert-op" style="flex:1">
+          <option value="above">Notify when above</option>
+          <option value="below">Notify when below</option>
+        </select>
+        <input id="alert-price" type="number" step="any" placeholder="${live.price!=null?live.price.toFixed(4):'price'}" style="flex:1">
+        <button class="btn btn-primary" id="btn-alert" style="padding:10px 14px;min-height:40px">Set</button>
+      </div>
+      <div id="existing-alerts" style="margin-top:8px"></div>
+    </div>
+
+    <button class="btn btn-ghost btn-block" id="close-sheet" style="margin-top:14px">Close</button>
+  `;
+  sheet.classList.add('open');
+  document.body.style.overflow='hidden';
+
+  // chart
+  let currentDays = '7';
+  await drawCoinChart(coinId, currentDays);
+  body.querySelectorAll('[data-range]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      body.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentDays = btn.dataset.range;
+      await drawCoinChart(coinId, currentDays);
+    };
+  });
+
+  document.getElementById('fav-toggle').onclick = ()=>{
+    const i = state.favourites.indexOf(coinId);
+    if(i>=0) state.favourites.splice(i,1); else state.favourites.unshift(coinId);
+    saveState();
+    openCoinSheet(coinId); // refresh
+  };
+  document.getElementById('watch-toggle').onclick = ()=>{
+    const i = state.watchlist.indexOf(coinId);
+    if(i>=0) state.watchlist.splice(i,1); else state.watchlist.unshift(coinId);
+    saveState();
+    openCoinSheet(coinId);
+  };
+  document.getElementById('btn-buy').onclick = ()=>openTradeSheet(coinId,'buy');
+  document.getElementById('btn-sell').onclick = ()=>{ if(held) openTradeSheet(coinId,'sell'); };
+  document.getElementById('close-sheet').onclick = closeSheet;
+
+  // alerts
+  renderExistingAlerts(coinId);
+  document.getElementById('btn-alert').onclick = ()=>{
+    const op = document.getElementById('alert-op').value;
+    const price = parseFloat(document.getElementById('alert-price').value);
+    if(!(price>0)) return toast('Enter a price','down');
+    state.alerts.push({coinId, op, price, triggered:false, createdAt:Date.now()});
+    saveState();
+    renderExistingAlerts(coinId);
+    toast('Alert set','up');
+  };
+}
+function renderExistingAlerts(coinId){
+  const wrap = document.getElementById('existing-alerts');
+  if(!wrap) return;
+  const mine = state.alerts.filter(a=>a.coinId===coinId);
+  if(!mine.length){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = mine.map((a,i)=>`
+    <div class="tiny" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--border)">
+      <span>${a.op==='above'?'↑':'↓'} ${fmt(a.price)} ${a.triggered?'<span class="chip up">hit</span>':''}</span>
+      <button class="btn btn-ghost tiny" data-del-alert="${state.alerts.indexOf(a)}" style="padding:4px 8px;min-height:28px">Remove</button>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('[data-del-alert]').forEach(b=>{
+    b.onclick = ()=>{
+      state.alerts.splice(parseInt(b.dataset.delAlert),1);
+      saveState();
+      renderExistingAlerts(coinId);
+    };
+  });
+}
+async function drawCoinChart(coinId, days){
+  const ctxCanvas = document.getElementById('coin-chart');
+  if(!ctxCanvas) return;
+  const ctx = ctxCanvas.getContext('2d');
+  try{
+    const data = await getMarketChart(coinId, days);
+    const pts = (data?.prices||[]);
+    const labels = pts.map(p => new Date(p[0]));
+    const values = pts.map(p => p[1]);
+    if(sheetChart) sheetChart.destroy();
+    const change = values.length>1 ? (values[values.length-1]-values[0]) : 0;
+    const colour = change>=0 ? getCSS('--green') : getCSS('--red');
+    sheetChart = new Chart(ctx, {
+      type:'line',
+      data:{labels, datasets:[{data:values, borderColor:colour, backgroundColor:gradientFill(ctx,colour,'rgba(0,0,0,0)'), borderWidth:2, tension:.2, fill:true, pointRadius:0}]},
+      options:{...chartCommon(),
+        scales:{...chartCommon().scales,
+          x:{...chartCommon().scales.x, type:'time',
+             time:{tooltipFormat: days==='1'?'HH:mm':'MMM d, yyyy'}
+            }
+        },
+        plugins:{...chartCommon().plugins, tooltip:{...chartCommon().plugins.tooltip,
+          callbacks:{label:c=>fmt(c.parsed.y), title:items=>new Date(items[0].parsed.x).toLocaleString()}
+        }}
+      }
+    });
+  }catch(e){
+    if(sheetChart) sheetChart.destroy();
+    const c = ctxCanvas.getContext('2d');
+    c.clearRect(0,0,ctxCanvas.width,ctxCanvas.height);
+    c.fillStyle = getCSS('--text-dim');
+    c.font='13px '+getComputedStyle(document.body).fontFamily;
+    c.textAlign='center';
+    c.fillText('Chart unavailable (offline)', ctxCanvas.width/2, ctxCanvas.height/2);
+  }
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('sheet').onclick = (e)=>{ if(e.target.id==='sheet') closeSheet(); };
+
+/* ---------- Sheet: trade ---------- */
+function openTradeSheet(coinId, type){
+  const body = document.getElementById('sheet-body');
+  const meta = getCoinMeta(coinId) || {id:coinId,name:coinId,symbol:coinId};
+  const live = livePricesById[coinId] || {};
+  const held = state.holdings[coinId];
+  const maxAud = type==='buy' ? state.cash : (held ? held.amount * (live.price||0) : 0);
+  body.innerHTML = `
+    <div class="sheet-handle"></div>
+    <h2>${type==='buy'?'Buy':'Sell'} ${escapeHTML(meta.name||coinId)}</h2>
+    <div class="muted tiny" style="margin-bottom:12px">Live price ${fmt(live.price)} · ${type==='buy'?'Cash':'Holding'} ${type==='buy'?fmt(state.cash):fmtCoin(held?.amount||0)+' '+(meta.symbol||'').toUpperCase()}</div>
+
+    <label class="tiny muted">Amount (${state.settings.currency.toUpperCase()})</label>
+    <input id="trade-aud" type="number" step="any" placeholder="0.00" inputmode="decimal" autofocus>
+
+    <div class="tabs-pills" style="margin-top:8px;margin-bottom:0">
+      <button class="pill" data-pct="25">25%</button>
+      <button class="pill" data-pct="50">50%</button>
+      <button class="pill" data-pct="75">75%</button>
+      <button class="pill" data-pct="100">Max</button>
+    </div>
+
+    <label class="tiny muted" style="display:block;margin-top:12px">Or coin amount</label>
+    <input id="trade-coin" type="number" step="any" placeholder="0.00000000" inputmode="decimal">
+
+    <label class="tiny muted" style="display:block;margin-top:12px">Note (optional)</label>
+    <textarea id="trade-note" rows="2" placeholder="Why this trade?"></textarea>
+
+    ${state.settings.realistic?'<div class="tiny faint" style="margin-top:8px">Realistic mode: 0.5% fee + 0.1% spread applied.</div>':''}
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" id="trade-cancel">Cancel</button>
+      <button class="btn ${type==='buy'?'btn-buy':'btn-sell'}" id="trade-confirm">${type==='buy'?'Buy':'Sell'}</button>
+    </div>
+  `;
+  const audI = document.getElementById('trade-aud');
+  const coinI = document.getElementById('trade-coin');
+  audI.oninput = ()=>{ if(live.price) coinI.value = (parseFloat(audI.value||0)/live.price).toFixed(8); };
+  coinI.oninput = ()=>{ if(live.price) audI.value = (parseFloat(coinI.value||0)*live.price).toFixed(2); };
+  body.querySelectorAll('[data-pct]').forEach(b=>b.onclick=()=>{
+    const pct = parseInt(b.dataset.pct)/100;
+    audI.value = (maxAud*pct).toFixed(2);
+    audI.dispatchEvent(new Event('input'));
+  });
+  document.getElementById('trade-cancel').onclick = ()=>openCoinSheet(coinId);
+  document.getElementById('trade-confirm').onclick = ()=>{
+    const note = document.getElementById('trade-note').value;
+    const audVal = parseFloat(audI.value);
+    const coinVal = parseFloat(coinI.value);
+    let ok;
+    if(audVal>0) ok = executeTrade({coinId, type, audAmount:audVal, note});
+    else if(coinVal>0) ok = executeTrade({coinId, type, coinAmount:coinVal, note});
+    else return toast('Enter an amount','down');
+    if(ok){ closeSheet(); renderAll(); }
+  };
+}
+
+/* ---------- Render: Dream ---------- */
+let forecastChart;
+async function renderDream(){
+  // goal
+  const v = totalValue();
+  const goal = state.goal;
+  const pct = Math.min(100, v/goal*100);
+  const dailyRate = computeDailyReturnRate();
+  const etaDays = projectDaysToTarget(v, dailyRate, goal);
+  document.getElementById('goal-display').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div style="font-size:22px;font-weight:700">${fmt(v)} <span class="muted tiny">of ${fmt(goal)}</span></div>
+      <div class="chip ${pct>=100?'up':'flat'}">${pct.toFixed(1)}%</div>
+    </div>
+    <div class="progress"><div class="progress-fill" style="width:${Math.min(100,pct)}%"></div></div>
+    <div class="tiny muted" style="margin-top:8px">${
+      v>=goal ? '🎉 Goal reached. Set a bigger dream in Settings.' :
+      (dailyRate>0 ? `At your current pace (${(dailyRate*100).toFixed(2)}%/day), about <strong>${formatETA(etaDays)}</strong>.` :
+       'No growth rate yet — make a trade or wait a few days.')
+    }</div>
+  `;
+
+  // forecast
+  const annualR = Math.pow(1 + (dailyRate||0), 365) - 1;
+  document.getElementById('forecast-rate').innerHTML =
+    `Your rolling daily return: <strong>${(dailyRate*100).toFixed(3)}%</strong> · annualised <strong>${(annualR*100).toFixed(1)}%</strong>`;
+  document.getElementById('fc-1y').textContent = fmt(v * Math.pow(1+(dailyRate||0), 365));
+  document.getElementById('fc-5y').textContent = fmt(v * Math.pow(1+(dailyRate||0), 365*5));
+  document.getElementById('fc-10y').textContent = fmt(v * Math.pow(1+(dailyRate||0), 365*10));
+  document.getElementById('fc-daily').textContent = (dailyRate*100).toFixed(3)+'%';
+  drawForecastChart(v, dailyRate);
+
+  // what-if coin select
+  const sel = document.getElementById('whatif-coin');
+  if(!sel.options.length){
+    sel.innerHTML = topCoins.slice(0,30).map(c=>`<option value="${c.id}">${escapeHTML(c.name)} (${(c.symbol||'').toUpperCase()})</option>`).join('') || '<option value="bitcoin">Bitcoin (BTC)</option>';
+  }
+  const di = document.getElementById('whatif-date');
+  if(!di.value){
+    const d = new Date(); d.setFullYear(d.getFullYear()-1);
+    di.value = d.toISOString().slice(0,10);
+  }
+
+  // streak
+  const s = state.streak;
+  const milestones = [7,30,100,365];
+  document.getElementById('streak-display').innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:10px">
+      <div style="font-size:32px;font-weight:800">🔥 ${s.current}</div>
+      <div class="muted">days current · best ${s.best}</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${milestones.map(m => `<div class="badge ${s.milestones.includes(m)?'unlocked':''}">${s.milestones.includes(m)?'🏅':'🔒'} ${m} days</div>`).join('')}
+    </div>
+  `;
+
+  // challenges
+  renderChallenges();
+}
+
+function computeDailyReturnRate(){
+  const h = state.portfolioHistory;
+  if(h.length < 2) return 0;
+  const window = h.slice(-30);
+  const first = window[0].value, last = window[window.length-1].value;
+  const days = Math.max(1, daysBetween(window[0].ts, window[window.length-1].ts));
+  if(first<=0) return 0;
+  return Math.pow(last/first, 1/days) - 1;
+}
+function projectDaysToTarget(current, dailyRate, target){
+  if(dailyRate<=0) return Infinity;
+  if(current<=0) return Infinity;
+  if(current>=target) return 0;
+  return Math.log(target/current)/Math.log(1+dailyRate);
+}
+function formatETA(days){
+  if(!isFinite(days)) return '∞ at this pace';
+  if(days<30) return Math.ceil(days)+' days';
+  if(days<365) return Math.round(days/30)+' months';
+  return (days/365).toFixed(1)+' years';
+}
+function drawForecastChart(v, rate){
+  const ctx = document.getElementById('forecast-chart').getContext('2d');
+  const months = 60;
+  const labels = [];
+  const realistic=[], dream=[], pess=[];
+  for(let i=0;i<=months;i++){
+    const d = new Date(); d.setMonth(d.getMonth()+i);
+    labels.push(d.toISOString().slice(0,7));
+    const days = i*30;
+    realistic.push(v * Math.pow(1+rate, days));
+    dream.push(v * Math.pow(1+rate*2, days));
+    pess.push(v * Math.pow(1+rate*0.5, days));
+  }
+  if(forecastChart) forecastChart.destroy();
+  forecastChart = new Chart(ctx, {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Dream (2× rate)', data:dream, borderColor:getCSS('--accent'), borderWidth:2, pointRadius:0, borderDash:[6,4]},
+      {label:'Realistic', data:realistic, borderColor:getCSS('--accent-2'), borderWidth:2.5, pointRadius:0, fill:true, backgroundColor:gradientFill(ctx,getCSS('--accent-2'),'rgba(0,0,0,0)')},
+      {label:'Pessimistic (½× rate)', data:pess, borderColor:getCSS('--text-dim'), borderWidth:2, pointRadius:0, borderDash:[2,3]},
+    ]},
+    options:{...chartCommon(), plugins:{...chartCommon().plugins, legend:{display:true, labels:{color:getCSS('--text-dim'), font:{size:11}}}}}
+  });
+}
+
+async function runWhatIf(){
+  const id = document.getElementById('whatif-coin').value;
+  const date = document.getElementById('whatif-date').value;
+  const res = document.getElementById('whatif-result');
+  res.innerHTML = '<div class="loading-row"><div class="spinner"></div> Crunching dream…</div>';
+  try{
+    const h = await getHistoryOnDate(id, date);
+    const price = h?.market_data?.current_price?.[state.settings.currency];
+    const cur = getCoinPrice(id);
+    if(!price || !cur){ res.innerHTML='<div class="tiny down">Could not fetch history for that date.</div>'; return; }
+    const coins = 100/price;
+    const today = coins * cur;
+    const x = today/100;
+    res.innerHTML = `
+      <div class="card" style="background:var(--bg-elev-2);margin-bottom:0">
+        <div class="muted tiny">$100 in ${escapeHTML(getCoinMeta(id)?.name||id)} on ${date}</div>
+        <div class="hero-value" style="font-size:32px;margin-top:4px">${fmt(today)}</div>
+        <div class="${today>=100?'up':'down'}" style="margin-top:4px;font-weight:600">${x.toFixed(2)}× return · ${fmtPct((today-100)/100*100)}</div>
+        <div class="tiny faint" style="margin-top:6px">Hypothetical. Past performance is not future performance.</div>
+      </div>`;
+  }catch(e){
+    res.innerHTML = '<div class="tiny down">Lookup failed. Try a different date.</div>';
+  }
+}
+
+/* ---------- Challenges ---------- */
+const CHALLENGES = [
+  {id:'c1', title:'Turn $100 into $1,000 in 90 days', target:1000, days:90, rule:'top10'},
+  {id:'c2', title:'Survive a week without losses', target:null, days:7, rule:'no_red'},
+  {id:'c3', title:'Diamond hands: no sells for 30 days', target:null, days:30, rule:'no_sell'}
+];
+function renderChallenges(){
+  const el = document.getElementById('challenges-list');
+  el.innerHTML = CHALLENGES.map(c=>{
+    const run = state.challenges.find(r=>r.id===c.id && r.active);
+    return `<div class="card" style="background:var(--bg-elev-2);margin-bottom:8px">
+      <div style="font-weight:700">${escapeHTML(c.title)}</div>
+      <div class="tiny muted" style="margin-top:4px">${c.days} days${c.target?` · target ${fmt(c.target)}`:''}</div>
+      ${run ? `
+        <div class="tiny" style="margin-top:6px">Started ${new Date(run.startedAt).toLocaleDateString()} · ${Math.max(0, c.days - daysBetween(run.startedAt, Date.now()))} days left</div>
+        <button class="btn btn-ghost tiny btn-block" data-end="${c.id}" style="margin-top:8px">Abandon</button>
+      ` : `<button class="btn btn-primary tiny btn-block" data-start="${c.id}" style="margin-top:8px">Start Challenge</button>`}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>{
+    state.challenges.push({id:b.dataset.start, startedAt:Date.now(), active:true});
+    saveState(); renderChallenges(); toast('Challenge started','up');
+  });
+  el.querySelectorAll('[data-end]').forEach(b=>b.onclick=()=>{
+    const r = state.challenges.find(x=>x.id===b.dataset.end && x.active);
+    if(r) r.active=false;
+    saveState(); renderChallenges();
+  });
+}
+
+/* ---------- Render: Journal ---------- */
+function renderJournal(){
+  const q = (document.getElementById('journal-search')?.value || '').toLowerCase();
+  const list = document.getElementById('journal-list');
+  const entries = state.journal.filter(e => !q || e.text.toLowerCase().includes(q));
+  if(!entries.length){
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📓</div><div class="empty-title">${q?'No matches':'No notes yet'}</div><div class="tiny">${q?'Try a different word.':'Write what you\'re thinking, even briefly. Future you will thank you.'}</div></div>`;
+    return;
+  }
+  list.innerHTML = entries.map(e=>{
+    const trade = e.tradeId ? state.trades.find(t=>t.id===e.tradeId) : null;
+    return `<div class="journal-entry">
+      <div class="journal-meta">
+        <span>${new Date(e.ts).toLocaleString()}</span>
+        ${trade ? `<span class="chip ${trade.type==='buy'?'up':'down'}">${trade.type.toUpperCase()} ${escapeHTML(trade.symbol)}</span>` : ''}
+        <button class="btn btn-ghost tiny" data-del-j="${e.id}" style="padding:2px 8px;min-height:24px;margin-left:auto">×</button>
+      </div>
+      <div class="journal-body">${escapeHTML(e.text)}</div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('[data-del-j]').forEach(b=>b.onclick=()=>{
+    state.journal = state.journal.filter(e=>e.id!==b.dataset.delJ);
+    saveState(); renderJournal();
+  });
+}
+
+/* ---------- Render: Settings ---------- */
+function renderSettings(){
+  document.getElementById('sw-light').classList.toggle('on', state.settings.light);
+  document.getElementById('sw-usd').classList.toggle('on', state.settings.currency==='usd');
+  document.getElementById('sw-realistic').classList.toggle('on', state.settings.realistic);
+  document.getElementById('sw-dca').classList.toggle('on', state.settings.dca.enabled);
+  document.getElementById('dca-coin-wrap').style.display = state.settings.dca.enabled?'block':'none';
+  document.getElementById('settings-mode-line').textContent = 'Mode: '+(state.settings.realistic?'Realistic':'Pure Dream');
+
+  const dcaSel = document.getElementById('dca-coin');
+  if(!dcaSel.options.length){
+    dcaSel.innerHTML = topCoins.slice(0,30).map(c=>`<option value="${c.id}" ${c.id===state.settings.dca.coinId?'selected':''}>${escapeHTML(c.name)}</option>`).join('') || '<option value="bitcoin">Bitcoin</option>';
+  }
+
+  document.querySelectorAll('[data-goal]').forEach(p=>{
+    p.classList.toggle('active', parseInt(p.dataset.goal)===state.goal);
+  });
+  const goalCustom = document.getElementById('goal-custom');
+  if(![500,1000,10000,100000,1000000].includes(state.goal)){
+    goalCustom.value = state.goal;
+  } else {
+    goalCustom.value = '';
+  }
+}
+
+/* ---------- Chart helpers ---------- */
+function getCSS(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function chartCommon(){
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    interaction:{intersect:false, mode:'index'},
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:getCSS('--bg-elev'),
+        titleColor:getCSS('--text'), bodyColor:getCSS('--text'),
+        borderColor:getCSS('--border'), borderWidth:1,
+        padding:10, cornerRadius:8, displayColors:false
+      }
+    },
+    scales:{
+      x:{grid:{display:false}, ticks:{color:getCSS('--text-faint'), maxRotation:0, font:{size:10}, maxTicksLimit:6}},
+      y:{grid:{color:getCSS('--border'), drawBorder:false}, ticks:{color:getCSS('--text-faint'), font:{size:10}, callback:v=>fmt(v)}}
+    }
+  };
+}
+function gradientFill(ctx, top, bottom){
+  const c = ctx.canvas;
+  const g = ctx.createLinearGradient(0,0,0,c.height||200);
+  g.addColorStop(0, hexAlpha(top, .35));
+  g.addColorStop(1, bottom);
+  return g;
+}
+function hexAlpha(c, a){
+  if(c.startsWith('#')){
+    const n = parseInt(c.slice(1), 16);
+    const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  return c;
+}
+
+/* ---------- Number animation ---------- */
+function setNumber(id, newText, change){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(el.textContent === newText){ return; }
+  el.textContent = newText;
+  if(change>0){ el.classList.remove('flash-down'); el.classList.remove('flash-up'); void el.offsetWidth; el.classList.add('flash-up'); }
+  else if(change<0){ el.classList.remove('flash-up'); el.classList.remove('flash-down'); void el.offsetWidth; el.classList.add('flash-down'); }
+}
+
+/* ---------- Alerts check ---------- */
+function checkAlerts(){
+  const hits = [];
+  state.alerts.forEach(a=>{
+    if(a.triggered) return;
+    const p = getCoinPrice(a.coinId);
+    if(p==null) return;
+    if((a.op==='above' && p>=a.price) || (a.op==='below' && p<=a.price)){
+      a.triggered = true;
+      hits.push({coinId:a.coinId, op:a.op, price:a.price, current:p});
+    }
+  });
+  if(hits.length){
+    saveState();
+    const h = hits[0];
+    const meta = getCoinMeta(h.coinId);
+    toast(`🔔 ${(meta?.symbol||h.coinId).toUpperCase()} ${h.op} ${fmt(h.price)}`, h.op==='above'?'up':'down');
+  }
+}
+
+/* ---------- Welcome / disclaimer ---------- */
+function showWelcome(){
+  const body = document.getElementById('sheet-body');
+  body.innerHTML = `
+    <div class="sheet-handle"></div>
+    <h2>Welcome to your $100 Dream</h2>
+    <div style="margin:8px 0 14px;color:var(--text-dim);font-size:14px;line-height:1.6">
+      You start with a virtual <strong style="color:var(--text)">$100 AUD</strong>. Trade crypto at real prices, paper money only.
+      Open the app daily to build a streak, watch your fantasy portfolio grow, and dream a little.
+    </div>
+    <div class="disclaimer-banner">
+      <strong>Heads up.</strong> This is a simulation. No real money. No exchange. Prices are from CoinGecko's free public API and may be delayed. This is not financial advice. Past performance is not future performance.
+    </div>
+    <button class="btn btn-primary btn-block" id="welcome-go" style="margin-top:14px">Start Dreaming</button>
+  `;
+  document.getElementById('sheet').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.getElementById('welcome-go').onclick = ()=>{
+    state.lastSeenWelcome = true; saveState();
+    closeSheet();
+  };
+}
+
+/* ---------- View routing ---------- */
+function setView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.view===name));
+  if(name==='portfolio') renderPortfolio();
+  if(name==='market') renderMarket();
+  if(name==='dream') renderDream();
+  if(name==='journal') renderJournal();
+  if(name==='settings') renderSettings();
+  window.scrollTo(0,0);
+}
+
+/* ---------- Render-all (after data refresh) ---------- */
+function renderAll(){
+  const active = document.querySelector('.view.active');
+  if(!active) return;
+  const name = active.id.replace('view-','');
+  setView(name);
+}
+
+/* ---------- Event wiring ---------- */
+function wire(){
+  // tabs
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => setView(t.dataset.view));
+
+  // currency toggle (header button)
+  document.getElementById('btn-currency-toggle').onclick = async () => {
+    state.settings.currency = state.settings.currency==='aud'?'usd':'aud';
+    document.getElementById('btn-currency-toggle').textContent = state.settings.currency.toUpperCase();
+    saveState();
+    await refreshMarket();
+    renderAll();
+  };
+  document.getElementById('btn-currency-toggle').textContent = state.settings.currency.toUpperCase();
+
+  // refresh
+  document.getElementById('btn-refresh').onclick = async () => {
+    document.getElementById('btn-refresh').textContent = '…';
+    await refreshMarket(); checkAlerts(); renderAll();
+    document.getElementById('btn-refresh').textContent = '↻';
+  };
+
+  // market filter pills
+  document.querySelectorAll('[data-mfilter]').forEach(p => p.onclick = () => {
+    document.querySelectorAll('[data-mfilter]').forEach(b=>b.classList.toggle('active', b===p));
+    marketFilter = p.dataset.mfilter;
+    renderMarket();
+  });
+
+  // search
+  let searchTimer;
+  document.getElementById('coin-search').oninput = (e)=>{
+    clearTimeout(searchTimer);
+    searchQuery = e.target.value.trim();
+    searchTimer = setTimeout(()=>renderMarket(), 250);
+  };
+
+  // Portfolio "Buy" button → opens market with focus
+  document.getElementById('btn-add-coin').onclick = ()=>{
+    setView('market');
+    document.getElementById('coin-search').focus();
+  };
+
+  // Switches
+  document.getElementById('sw-light').onclick = ()=>{
+    state.settings.light = !state.settings.light;
+    applyTheme(); saveState(); renderSettings();
+  };
+  document.getElementById('sw-usd').onclick = async ()=>{
+    state.settings.currency = state.settings.currency==='aud'?'usd':'aud';
+    saveState();
+    document.getElementById('btn-currency-toggle').textContent = state.settings.currency.toUpperCase();
+    await refreshMarket();
+    renderSettings(); renderAll();
+  };
+  document.getElementById('sw-realistic').onclick = ()=>{
+    state.settings.realistic = !state.settings.realistic;
+    saveState(); renderSettings();
+  };
+  document.getElementById('sw-dca').onclick = ()=>{
+    state.settings.dca.enabled = !state.settings.dca.enabled;
+    saveState(); renderSettings();
+  };
+  document.getElementById('dca-coin').onchange = (e)=>{
+    state.settings.dca.coinId = e.target.value; saveState();
+  };
+
+  // Goal pills
+  document.querySelectorAll('[data-goal]').forEach(p=>p.onclick=()=>{
+    state.goal = parseInt(p.dataset.goal); goalReachedFlag = false; saveState(); renderSettings();
+  });
+  document.getElementById('goal-custom').onchange = (e)=>{
+    const v = parseFloat(e.target.value); if(v>0){ state.goal = v; goalReachedFlag = false; saveState(); renderSettings(); }
+  };
+
+  // Export / import / reset
+  document.getElementById('link-export').onclick = ()=>{
+    const blob = new Blob([JSON.stringify(state, null, 2)],{type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `hundred-dollar-dream-${todayKey()}.json`; a.click();
+  };
+  document.getElementById('link-export-csv').onclick = ()=>{
+    const head = 'timestamp,type,coin,symbol,coin_amount,price,aud_amount,fee\n';
+    const rows = state.trades.map(t => [new Date(t.ts).toISOString(), t.type, t.coinId, t.symbol, t.coinAmount, t.price, t.audAmount, t.fee||0].join(',')).join('\n');
+    const blob = new Blob([head+rows],{type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `trades-${todayKey()}.csv`; a.click();
+  };
+  document.getElementById('link-import').onclick = ()=>document.getElementById('import-file').click();
+  document.getElementById('import-file').onchange = async (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const txt = await f.text();
+      const data = JSON.parse(txt);
+      if(!data.version) throw new Error('Not a valid dream export');
+      if(!confirm('Replace your current dream with the imported one?')) return;
+      state = {...structuredClone(DEFAULT_STATE), ...data,
+        settings:{...DEFAULT_STATE.settings, ...(data.settings||{}),
+          dca:{...DEFAULT_STATE.settings.dca, ...((data.settings||{}).dca||{})}}};
+      saveState(); applyTheme(); await refreshMarket(); renderAll();
+      toast('Dream restored','up');
+    }catch(err){ toast('Import failed: '+err.message,'down'); }
+  };
+  document.getElementById('btn-reset').onclick = ()=>{
+    if(!confirm('Reset everything? This wipes your portfolio, trades, journal and streak.')) return;
+    state = structuredClone(DEFAULT_STATE);
+    state.createdAt = Date.now();
+    saveState(); applyTheme(); renderAll();
+    toast('Dream reset to $100','up');
+  };
+
+  // Journal
+  document.getElementById('btn-journal-save').onclick = ()=>{
+    const t = document.getElementById('journal-input').value.trim();
+    if(!t) return;
+    state.journal.unshift({id:Date.now()+'-j', ts:Date.now(), text:t});
+    saveState();
+    document.getElementById('journal-input').value='';
+    renderJournal();
+    toast('Note saved','up');
+  };
+  document.getElementById('journal-search').oninput = ()=>renderJournal();
+
+  // What-if
+  document.getElementById('btn-whatif').onclick = runWhatIf;
+}
+
+function applyTheme(){
+  document.documentElement.dataset.theme = state.settings.light ? 'light' : 'dark';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', state.settings.light ? '#f6f7fb' : '#0b0d12');
+}
+
+/* ---------- Boot ---------- */
+async function boot(){
+  applyTheme();
+  wire();
+  await refreshMarket();
+  tickStreak();
+  runDCA();
+  checkAlerts();
+  snapshotPortfolio();
+  renderAll();
+  if(!state.lastSeenWelcome) showWelcome();
+
+  // periodic refresh (60s)
+  setInterval(async ()=>{
+    if(document.hidden) return;
+    await refreshMarket();
+    checkAlerts();
+    snapshotPortfolio();
+    if(document.querySelector('.view.active').id==='view-portfolio') renderPortfolio();
+    else if(document.querySelector('.view.active').id==='view-market') renderMarket();
+  }, 60_000);
+
+  // refresh on visibility
+  document.addEventListener('visibilitychange', async ()=>{
+    if(!document.hidden){
+      await refreshMarket();
+      tickStreak(); runDCA(); checkAlerts();
+      renderAll();
+    }
+  });
+}
+boot();
+</script>
+</body>
+</html>
