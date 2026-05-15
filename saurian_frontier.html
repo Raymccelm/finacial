@@ -384,6 +384,57 @@
   .comp-item button{padding:5px 10px;font-size:9px;}
   .comp-item.active{border-color:var(--accent);background:rgba(124,242,200,.1);}
 
+  /* Quest panel */
+  #quest-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+  #quest-list .quest{padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
+  #quest-list .row{display:flex;justify-content:space-between;align-items:baseline;}
+  #quest-list .nm{font-size:12px;font-weight:600;letter-spacing:.15em;color:#fff;text-transform:uppercase;}
+  #quest-list .ct{font-size:10px;letter-spacing:.18em;color:var(--accent);}
+  #quest-list .dx{font-size:10px;color:#cfe9d8;opacity:.75;margin-top:3px;}
+  #quest-list .bar{margin-top:6px;height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #quest-list .bar i{display:block;height:100%;background:linear-gradient(90deg,#7cf2c8,#3aa377);box-shadow:0 0 8px rgba(124,242,200,.4);transition:width .25s ease;}
+  #quest-list .rw{font-size:9px;letter-spacing:.22em;margin-top:5px;color:#ffe080;text-transform:uppercase;}
+  #quest-list .empty{font-size:10px;letter-spacing:.2em;opacity:.55;text-align:center;padding:24px 0;}
+
+  /* Dinodex */
+  #dex-meter{margin-top:10px;display:flex;align-items:center;gap:10px;}
+  #dex-meter .t{font-size:11px;letter-spacing:.25em;color:var(--accent);}
+  #dex-meter .bar{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #dex-meter .fill{height:100%;width:0%;background:linear-gradient(90deg,#7cf2c8,#ffd060);transition:width .3s ease;box-shadow:0 0 10px rgba(124,242,200,.4);}
+  #dex-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:14px;}
+  .dex-card{
+    padding:10px 8px;border-radius:10px;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);text-align:center;opacity:.5;
+  }
+  .dex-card.on{opacity:1;border-color:rgba(124,242,200,.35);}
+  .dex-card .icn{width:34px;height:34px;border-radius:50%;margin:0 auto 6px;}
+  .dex-card .nm{font-size:10px;letter-spacing:.1em;color:#fff;font-weight:600;line-height:1.3;}
+  .dex-card .tier{font-size:9px;letter-spacing:.22em;text-transform:uppercase;margin-top:4px;}
+  .dex-card .met{font-size:9px;color:#9ad4be;opacity:.75;margin-top:4px;letter-spacing:.12em;}
+  .dex-card.t-legendary{border-color:rgba(255,92,200,.4);}
+  .dex-card.t-apex{border-color:rgba(255,138,58,.4);}
+
+  /* Photo mode bar */
+  #photo-bar{
+    position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,12px) + 16px);
+    transform:translateX(-50%);display:none;gap:10px;
+    padding:8px 12px;background:var(--hud-bg);border:1px solid rgba(255,255,255,.18);
+    border-radius:99px;backdrop-filter:blur(8px);z-index:30;
+  }
+  #photo-bar.show{display:flex;}
+  #photo-bar button{
+    padding:8px 16px;border-radius:99px;border:1px solid rgba(124,242,200,.5);
+    background:rgba(124,242,200,.1);color:var(--accent);
+    font-size:10px;letter-spacing:.25em;text-transform:uppercase;font-weight:600;cursor:pointer;
+  }
+  #photo-bar button.snap{border-color:#fff;color:#fff;background:rgba(255,255,255,.2);}
+  #photo-bar button:active{transform:scale(.95);}
+
+  /* Photo frame border when in photo mode */
+  body.photo-mode #hud > *:not(#stage-banner):not(#scan-overlay):not(#dmg-vignette){display:none!important;}
+  body.photo-mode #touch{display:none;}
+  body.photo-mode #photo-bar{display:flex;}
+
   .hidden{display:none!important;}
 </style>
 </head>
@@ -393,7 +444,7 @@
 <!-- Boot screen -->
 <div id="boot">
   <h1>SAURIAN FRONTIER</h1>
-  <div class="sub">Stage III · Bond &amp; Saddle</div>
+  <div class="sub">Stage IV · The Full Wilds</div>
   <div class="bar"><div class="fill" id="boot-fill"></div></div>
   <div class="tag" id="boot-status">awakening the prehistoric...</div>
   <button id="boot-start">Enter the Wilds</button>
@@ -411,10 +462,10 @@
   <div id="biome-banner">Greenleaf Plains</div>
   <div id="minimap"><canvas id="minimap-canvas" width="240" height="240"></canvas></div>
   <div id="help">
-    <b style="color:var(--accent);letter-spacing:.2em;">Stage III</b><br/>
+    <b style="color:var(--accent);letter-spacing:.2em;">Stage IV</b><br/>
     WASD · Shift · Space · F dodge<br/>
     J light · K heavy · L lock · Q scan<br/>
-    E interact · M skills · ESC close
+    E interact · M skills · B dex · P photo
   </div>
 
   <div id="target-bar">
@@ -477,6 +528,18 @@
         <div class="nm">Companions</div>
         <div class="desc">Choose your active battle dino.</div>
       </div>
+      <div class="opt" data-roost="quests">
+        <div class="nm">Contracts</div>
+        <div class="desc">Active hunts &amp; daily bounty.</div>
+      </div>
+      <div class="opt" data-roost="dex">
+        <div class="nm">Dino-Dex</div>
+        <div class="desc">Track every species you've found.</div>
+      </div>
+      <div class="opt" data-roost="photo">
+        <div class="nm">Photo Mode</div>
+        <div class="desc">Pause time and save a PNG.</div>
+      </div>
       <div class="opt" data-roost="leave">
         <div class="nm">Step Back Out</div>
         <div class="desc">Return to the wilds.</div>
@@ -484,6 +547,38 @@
     </div>
     <div class="comp-list" id="comp-list" style="display:none;"></div>
   </div>
+</div>
+
+<!-- Quest panel modal -->
+<div class="modal" id="modal-quests">
+  <div class="panel" style="position:relative;">
+    <button class="close" data-modal-close>×</button>
+    <h2>Contracts</h2>
+    <div class="sub">Open hunts &amp; daily bounties</div>
+    <div id="quest-list"></div>
+    <div class="row-btns"><button data-modal-close>Done</button></div>
+  </div>
+</div>
+
+<!-- Dinodex modal -->
+<div class="modal" id="modal-dex">
+  <div class="panel" style="position:relative;">
+    <button class="close" data-modal-close>×</button>
+    <h2>Dino-Dex</h2>
+    <div class="sub">100% completion grants Mythic skin</div>
+    <div id="dex-meter">
+      <div class="bar"><div class="fill"></div></div>
+      <div class="t">0 / 0 · 0%</div>
+    </div>
+    <div id="dex-list"></div>
+    <div class="row-btns"><button data-modal-close>Done</button></div>
+  </div>
+</div>
+
+<!-- Photo mode bar -->
+<div id="photo-bar">
+  <button data-photo="exit">Exit</button>
+  <button class="snap" data-photo="snap">Capture</button>
 </div>
 
 <!-- Skill tree modal -->
@@ -1347,26 +1442,57 @@ const SCAN = {
   examineTime: 0,      // builds up while hovering same target
 };
 
-/* Dino-dex entries — element weaknesses & weak points for scan info card. */
-const DINODEX = {
-  parasaur: {
-    name: 'Parasaurolophus',
-    tier: 'Common',
-    diet: 'Herbivore',
-    weakness: ['Shock'],
-    weakpoints: ['Crest', 'Belly'],
-    tameMethod: 'Stealth feed berries',
-    color: 0x6c9b5a,
-  },
-  raptor: {
-    name: 'Velociraptor',
-    tier: 'Common',
-    diet: 'Carnivore',
-    weakness: ['Fire'],
-    weakpoints: ['Hind legs', 'Throat'],
-    tameMethod: 'Weaken-then-tranq',
-    color: 0x854a30,
-  },
+/* Full 24-species roster (Stage IV).
+   Each entry holds combat stats, scan-card info, palette and archetype.
+   `archetype` selects the procedural mesh builder; `palette` colourises it. */
+const SPECIES = {
+  // ============ COMMON (8) ============
+  parasaur:   { dexName:'Parasaurolophus', tier:'common', archetype:'biped-herb', size:1.0,  hp: 80,  damage: 8,  xp: 24,  hitReach:2.0, speed:7.0, sprintSpeed:12.5, fleeRadius:22, alertRadius:32, diet:'herb', palette:{body:0x6c9b5a,belly:0xc8d99a,crest:0xd66a3a,eye:0x1e1e1e}, weakness:['Shock'],         weakpoints:['Crest','Belly'],   tameMethod:'Stealth feed berries' },
+  raptor:     { dexName:'Velociraptor',     tier:'common', archetype:'biped-pred', size:0.85, hp: 60,  damage:14,  xp: 38,  hitReach:2.0, speed:6.0, sprintSpeed:14.0, fleeRadius:0,  alertRadius:28, diet:'carn', palette:{body:0x854a30,belly:0xc59866,crest:0x4a1a0e,eye:0xf8e76a}, weakness:['Fire'],          weakpoints:['Hind legs','Throat'], tameMethod:'Weaken-then-tranq' },
+  compy:      { dexName:'Compsognathus',    tier:'common', archetype:'biped-small',size:0.45, hp: 30,  damage: 6,  xp: 14,  hitReach:1.4, speed:8.0, sprintSpeed:15.0, fleeRadius:14, alertRadius:18, diet:'carn', palette:{body:0xe6b03a,belly:0xfff0b0,crest:0x6a3a10,eye:0x2a1a0e}, weakness:['Light'],         weakpoints:['Anywhere'],         tameMethod:'Stealth feed scraps' },
+  gallimimus: { dexName:'Gallimimus',       tier:'common', archetype:'biped-fast', size:1.0,  hp: 70,  damage: 6,  xp: 22,  hitReach:1.8, speed:9.0, sprintSpeed:18.0, fleeRadius:26, alertRadius:32, diet:'herb', palette:{body:0xb0925a,belly:0xf2e2b6,crest:0x5a3a18,eye:0x1e1e1e}, weakness:['Ice'],           weakpoints:['Long legs'],        tameMethod:'Stealth feed seeds' },
+  dilo:       { dexName:'Dilophosaurus',    tier:'common', archetype:'biped-pred', size:1.05, hp: 90,  damage:14,  xp: 42,  hitReach:2.0, speed:6.0, sprintSpeed:13.0, fleeRadius:0,  alertRadius:30, diet:'carn', palette:{body:0x6d894a,belly:0xc8e07a,crest:0xff8c50,eye:0xf8a000}, weakness:['Shock'],         weakpoints:['Frills','Throat'],  tameMethod:'Weaken-then-tranq' },
+  iguanodon:  { dexName:'Iguanodon',        tier:'common', archetype:'biped-herb', size:1.15, hp:130,  damage:14,  xp: 60,  hitReach:2.2, speed:5.5, sprintSpeed: 9.5, fleeRadius:18, alertRadius:24, diet:'herb', palette:{body:0x8e7a4a,belly:0xe8d4a0,crest:0x504030,eye:0x1e1e1e}, weakness:['Fire'],          weakpoints:['Belly','Thumb spike'], tameMethod:'Stealth feed fruits' },
+  pachy:      { dexName:'Pachycephalosaurus',tier:'common',archetype:'biped-herb', size:1.0,  hp:120,  damage:18,  xp: 50,  hitReach:2.0, speed:6.0, sprintSpeed:11.0, fleeRadius:10, alertRadius:22, diet:'herb', palette:{body:0x9c7848,belly:0xd6b870,crest:0xc06030,eye:0x1e1e1e}, weakness:['Shock'],         weakpoints:['Back','Tail'],      tameMethod:'Knock-out then feed' },
+  stego:      { dexName:'Stegosaurus',      tier:'common', archetype:'quad-plate', size:1.4,  hp:160,  damage:24,  xp: 70,  hitReach:3.0, speed:4.5, sprintSpeed: 8.0, fleeRadius:0,  alertRadius:18, diet:'herb', palette:{body:0x6a5a3a,belly:0xc4b07a,crest:0xff8a3a,eye:0x1e1e1e}, weakness:['Ice'],           weakpoints:['Belly','Hindquarters'], tameMethod:'Lasso ride & break' },
+  // ============ RARE (8) ============
+  trike:      { dexName:'Triceratops',      tier:'rare',   archetype:'quad-armor', size:1.3,  hp:180,  damage:28,  xp: 90,  hitReach:3.2, speed:5.0, sprintSpeed:10.0, fleeRadius:0,  alertRadius:18, diet:'herb', palette:{body:0x8c6a4a,belly:0xe1cfa6,crest:0xb89e76,eye:0x1e1e1e}, weakness:['Ice','Shock'],   weakpoints:['Hind legs','Flank'], tameMethod:'Lasso ride & break' },
+  anky:       { dexName:'Ankylosaurus',     tier:'rare',   archetype:'quad-armor', size:1.3,  hp:240,  damage:30,  xp:100,  hitReach:2.8, speed:3.5, sprintSpeed: 7.0, fleeRadius:0,  alertRadius:14, diet:'herb', palette:{body:0x4a5a3a,belly:0x8aa274,crest:0x202820,eye:0x1e1e1e}, weakness:['Fire'],          weakpoints:['Belly'],            tameMethod:'Stealth feed roots' },
+  therizino:  { dexName:'Therizinosaurus',  tier:'rare',   archetype:'biped-pred', size:1.4,  hp:200,  damage:34,  xp:120,  hitReach:3.0, speed:6.0, sprintSpeed:11.0, fleeRadius:0,  alertRadius:24, diet:'herb', palette:{body:0xa05a4a,belly:0xd8a890,crest:0x402a20,eye:0xf8a000}, weakness:['Light'],         weakpoints:['Belly','Claws'],    tameMethod:'Weaken-then-tranq' },
+  carno:      { dexName:'Carnotaurus',      tier:'rare',   archetype:'biped-pred', size:1.25, hp:180,  damage:34,  xp:120,  hitReach:2.4, speed:7.5, sprintSpeed:15.0, fleeRadius:0,  alertRadius:30, diet:'carn', palette:{body:0xb04030,belly:0xd0a060,crest:0x602010,eye:0xff5030}, weakness:['Ice'],           weakpoints:['Hind legs','Flank'], tameMethod:'Weaken-then-tranq' },
+  bio_para:   { dexName:'Bioluminescent Parasaur',tier:'rare',archetype:'biped-herb',size:1.0, hp:100, damage: 8, xp: 80, hitReach:2.0, speed:7.0, sprintSpeed:12.5, fleeRadius:22, alertRadius:30, diet:'herb', palette:{body:0x3a7e8a,belly:0x9af0e2,crest:0x8af0c0,eye:0x80ffe0}, weakness:['Shock'],         weakpoints:['Crest','Belly'],    tameMethod:'Feed glowfruit at night', glow:0x80ffd0 },
+  brachi:     { dexName:'Brachiosaurus',    tier:'rare',   archetype:'sauropod',   size:2.4,  hp:380,  damage:18,  xp:200,  hitReach:3.0, speed:3.0, sprintSpeed: 5.0, fleeRadius:10, alertRadius:24, diet:'herb', palette:{body:0x705a3a,belly:0xc8a06a,crest:0x402a18,eye:0x1e1e1e}, weakness:['Light'],         weakpoints:['Legs'],             tameMethod:'Stealth feed treetop fruit' },
+  pteran:     { dexName:'Pteranodon',       tier:'rare',   archetype:'pterosaur',  size:1.0,  hp: 90,  damage:14,  xp: 80,  hitReach:2.4, speed:7.0, sprintSpeed:14.0, fleeRadius:16, alertRadius:28, diet:'carn', palette:{body:0x8a6a4a,belly:0xc8b08a,crest:0x4a3020,eye:0xf8a000}, weakness:['Shock'],         weakpoints:['Wings'],            tameMethod:'Stealth feed fish' },
+  plesi:      { dexName:'Plesiosaurus',     tier:'rare',   archetype:'sauropod',   size:1.6,  hp:200,  damage:18,  xp:120,  hitReach:2.8, speed:5.0, sprintSpeed: 9.0, fleeRadius:14, alertRadius:24, diet:'carn', palette:{body:0x305a8a,belly:0x9ad0f0,crest:0x102040,eye:0xf8e76a}, weakness:['Shock'],         weakpoints:['Long neck'],        tameMethod:'Stealth feed fish' },
+  // ============ APEX (5) ============
+  allo:       { dexName:'Allosaurus',       tier:'apex',   archetype:'biped-pred-large', size:1.5, hp:300, damage:40, xp:200, hitReach:3.2, speed:6.5, sprintSpeed:13.0, fleeRadius:0, alertRadius:32, diet:'carn', palette:{body:0x6a3a20,belly:0xb09060,crest:0x301810,eye:0xf8a000}, weakness:['Shock'],         weakpoints:['Belly','Eyes'],     tameMethod:'Weaken with bola' },
+  t_rex:      { dexName:'Tyrannosaurus',    tier:'apex',   archetype:'biped-pred-large', size:1.8, hp:480, damage:55, xp:320, hitReach:3.6, speed:5.5, sprintSpeed:13.5, fleeRadius:0, alertRadius:40, diet:'carn', palette:{body:0x5a4a30,belly:0xa08068,crest:0x402a18,eye:0xff5030}, weakness:['Ice'],           weakpoints:['Belly','Eyes'],     tameMethod:'Weaken with bola net' },
+  spino:      { dexName:'Spinosaurus',      tier:'apex',   archetype:'biped-pred-large', size:1.8, hp:460, damage:50, xp:320, hitReach:3.4, speed:6.0, sprintSpeed:13.0, fleeRadius:0, alertRadius:36, diet:'carn', palette:{body:0x305a4a,belly:0xa0c8b0,crest:0xff8a3a,eye:0xf8a000}, weakness:['Shock'],         weakpoints:['Sail','Belly'],     tameMethod:'Weaken with bola net' },
+  mosa:       { dexName:'Mosasaurus',       tier:'apex',   archetype:'sauropod',         size:2.2, hp:420, damage:48, xp:300, hitReach:3.4, speed:4.5, sprintSpeed:10.0, fleeRadius:0, alertRadius:30, diet:'carn', palette:{body:0x204a6a,belly:0x80b0c8,crest:0x101830,eye:0xff5030}, weakness:['Shock'],         weakpoints:['Belly'],            tameMethod:'Bola net & fish' },
+  frost_theri:{ dexName:'Frost Therizinosaurus',tier:'apex',archetype:'biped-pred',     size:1.6, hp:380, damage:48, xp:500, hitReach:3.4, speed:6.5, sprintSpeed:12.0, fleeRadius:0, alertRadius:32, diet:'herb', palette:{body:0xa0c0e8,belly:0xf0f8ff,crest:0x4080c0,eye:0xa0e8ff}, weakness:['Fire'],          weakpoints:['Claws','Belly'],    tameMethod:'Withstand winter night', glow:0xa0e8ff },
+  // ============ LEGENDARY (3) ============
+  stormwing:  { dexName:'Stormwing Pteranodon',tier:'legendary',archetype:'pterosaur',  size:1.6, hp:380, damage:50, xp:600, hitReach:3.0, speed:8.0, sprintSpeed:18.0, fleeRadius:0, alertRadius:46, diet:'carn', palette:{body:0x4060a0,belly:0xb0e0ff,crest:0x6680ff,eye:0x80c0ff}, weakness:['Earth'],         weakpoints:['Wings'],            tameMethod:'Bond after epic duel', glow:0x6080ff },
+  magma_carno:{ dexName:'Magma Carnotaurus', tier:'legendary',archetype:'biped-pred',    size:1.6, hp:400, damage:55, xp:600, hitReach:2.8, speed:8.0, sprintSpeed:16.0, fleeRadius:0, alertRadius:42, diet:'carn', palette:{body:0x301010,belly:0x8a3020,crest:0xff6020,eye:0xffe040}, weakness:['Ice'],           weakpoints:['Crest','Belly'],    tameMethod:'Quench then ride',     glow:0xff5030 },
+  void_spino: { dexName:'Void Spinosaurus',  tier:'legendary',archetype:'biped-pred-large', size:2.4, hp:1200, damage:80, xp:2000, hitReach:4.2, speed:5.5, sprintSpeed:13.0, fleeRadius:0, alertRadius:60, diet:'carn', palette:{body:0x100a18,belly:0x301a48,crest:0xa080ff,eye:0xff20a0}, weakness:['Light'],         weakpoints:['Three glowing scars'], tameMethod:'Story climax',     glow:0xa080ff },
+};
+
+/* Mythic skin palette overlay applied at 100% dex completion. */
+const MYTHIC_OVERLAY = { body:0xfff0c8, belly:0xffe080, crest:0xffd040, eye:0xffffff, glow:0xffd060 };
+
+const TIER_COLORS = { common:0xb0c8be, rare:0x7fb7ff, apex:0xff8a3a, legendary:0xff5cc8 };
+const TIER_LABELS = { common:'Common', rare:'Rare', apex:'Apex', legendary:'Legendary' };
+
+/* Back-compat shim — older code reads `DINODEX[species]`. Build from SPECIES. */
+const DINODEX = Object.fromEntries(Object.entries(SPECIES).map(([k, v]) => [k, {
+  name: v.dexName, tier: TIER_LABELS[v.tier] || 'Common', diet: v.diet === 'carn' ? 'Carnivore' : 'Herbivore',
+  weakness: v.weakness, weakpoints: v.weakpoints, tameMethod: v.tameMethod, color: v.palette.body
+}]));
+
+// Legacy two-entry placeholder kept inert so existing references that used
+// inline lookups still resolve. (Older code path replaced; this is unused.)
+const _LEGACY_DINODEX_UNUSED = {
+  parasaur: DINODEX.parasaur,
+  raptor:   DINODEX.raptor,
   trike: {
     name: 'Triceratops',
     tier: 'Rare',
@@ -1409,6 +1535,7 @@ function tryAttack(kind){
     const dz = LOCK.target.pos.z - PLAYER.pos.z;
     if (dx || dz) PLAYER.yaw = Math.atan2(dx, dz);
   }
+  if (typeof AUDIO !== 'undefined') AUDIO.swing(kind === 'heavy' ? 0.28 : 0.18);
   return true;
 }
 
@@ -1543,6 +1670,7 @@ function doMeleeHitCheck(action){
     d.takeDamage(dmg, isCrit, forward);
     addScreenShake(action.crit ? 0.45 : 0.18);
     spawnHitSparks(d.pos.x, d.pos.y + d.profile.size * 1.4, d.pos.z, isCrit);
+    if (typeof AUDIO !== 'undefined') AUDIO.hit(isCrit, 0.32);
   }
 }
 
@@ -1655,6 +1783,7 @@ function updateScan(dt){
 }
 
 function showInfoCard(d){
+  if (typeof onScan === 'function') onScan(d.species);
   const info = DINODEX[d.species] || { name: d.species, tier: '—', diet: '—', weakness: [], weakpoints: [], tameMethod: '—' };
   $infoCard.classList.add('show');
   $infoCard.querySelector('h3').textContent = info.name;
@@ -1774,6 +1903,7 @@ function updateLoot(dt){
       L.mesh.geometry.dispose();
       LOOT_ITEMS.splice(i, 1);
       refreshInv();
+      if (typeof AUDIO !== 'undefined') AUDIO.pickup(0.22);
     }
   }
 }
@@ -2005,17 +2135,25 @@ function updatePlayer(dt){
 
 function makeDinoMesh(species){
   const g = new THREE.Group();
-  const palette = {
-    parasaur: { body: 0x6c9b5a, belly: 0xc8d99a, crest: 0xd66a3a, eye: 0x1e1e1e },
-    raptor:   { body: 0x854a30, belly: 0xc59866, crest: 0x4a1a0e, eye: 0xf8e76a },
-    trike:    { body: 0x8c6a4a, belly: 0xe1cfa6, crest: 0xb89e76, eye: 0x1e1e1e },
-  }[species] || { body: 0x6c9b5a, belly: 0xc8d99a, crest: 0x884422, eye: 0x111111 };
+  const spec = SPECIES[species] || SPECIES.parasaur;
+  const palette = spec.palette;
+  const archetype = spec.archetype;
   const bodyMat = toonMat(palette.body, { flatShading:true });
   const bellyMat = toonMat(palette.belly, { flatShading:true });
   const crestMat = toonMat(palette.crest, { flatShading:true });
   const eyeMat = toonMat(palette.eye, { flatShading:true });
+  // Glow halo for legendary / bio variants
+  const addGlow = (parent, size, color) => {
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(size, 8, 6),
+      new THREE.MeshBasicMaterial({ color, transparent:true, opacity:0.18, depthWrite:false, blending:THREE.AdditiveBlending })
+    );
+    parent.add(m);
+    return m;
+  };
 
-  if (species === 'parasaur'){
+  // Archetype dispatch — palette comes from SPECIES, geometry from these builders.
+  if (archetype === 'biped-herb'){
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.4, 3.2), bodyMat);
     body.position.y = 1.4; g.add(body);
     const belly = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 3.0), bellyMat);
@@ -2037,7 +2175,7 @@ function makeDinoMesh(species){
     const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), eyeMat); eyeR.position.set(-0.3, 2.75, 3.1); g.add(eyeR);
     g.userData.parts = { lFL, lFR, lBL, lBR, head, tail, neck };
   }
-  else if (species === 'raptor'){
+  else if (archetype === 'biped-pred'){
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 2.2), bodyMat);
     body.position.y = 1.2; g.add(body);
     const belly = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.3, 2.0), bellyMat);
@@ -2060,7 +2198,7 @@ function makeDinoMesh(species){
     const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), eyeMat); eyeR.position.set(-0.18, 1.65, 2.1); g.add(eyeR);
     g.userData.parts = { lFL: aL, lFR: aR, lBL, lBR, head, tail };
   }
-  else if (species === 'trike'){
+  else if (archetype === 'quad-armor'){
     const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.8, 3.6), bodyMat);
     body.position.y = 1.6; g.add(body);
     const belly = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.6, 3.4), bellyMat);
@@ -2083,6 +2221,184 @@ function makeDinoMesh(species){
     const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.8, 0.8, -1.0); g.add(lBL);
     const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.8, 0.8, -1.0); g.add(lBR);
     g.userData.parts = { lFL, lFR, lBL, lBR, head, tail };
+  }
+  /* === NEW archetypes === */
+  else if (archetype === 'biped-small'){
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1.1), bodyMat);
+    body.position.y = 0.7; g.add(body);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.5), bodyMat);
+    head.position.set(0, 0.95, 0.8); g.add(head);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.2, 6), bodyMat);
+    tail.position.set(0, 0.7, -1.0); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.16, 0.55, 0.18);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.16, 0.28, 0.0); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.16, 0.28, 0.0); g.add(lBR);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), eyeMat); eyeL.position.set( 0.11, 1.02, 1.05); g.add(eyeL);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), eyeMat); eyeR.position.set(-0.11, 1.02, 1.05); g.add(eyeR);
+    g.userData.parts = { lBL, lBR, head, tail };
+  }
+  else if (archetype === 'biped-fast'){
+    // Tall slender ostrich-like dino
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 2.0), bodyMat);
+    body.position.y = 1.5; g.add(body);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.3, 1.8), bellyMat);
+    belly.position.y = 1.2; g.add(belly);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.4, 6), bodyMat);
+    neck.position.set(0, 2.1, 1.0); neck.rotation.x = -0.5; g.add(neck);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.4, 0.85), bodyMat);
+    head.position.set(0, 2.7, 1.5); g.add(head);
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 6), crestMat);
+    beak.position.set(0, 2.7, 2.0); beak.rotation.x = -Math.PI/2; g.add(beak);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.8, 6), bodyMat);
+    tail.position.set(0, 1.4, -1.7); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.22, 1.5, 0.3);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.22, 0.75, 0.1); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.22, 0.75, 0.1); g.add(lBR);
+    const armGeo = new THREE.BoxGeometry(0.14, 0.55, 0.14);
+    const aL = new THREE.Mesh(armGeo, bodyMat); aL.position.set( 0.42, 1.4, 0.7); aL.rotation.x = 0.3; g.add(aL);
+    const aR = new THREE.Mesh(armGeo, bodyMat); aR.position.set(-0.42, 1.4, 0.7); aR.rotation.x = 0.3; g.add(aR);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), eyeMat); eyeL.position.set( 0.15, 2.75, 1.85); g.add(eyeL);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), eyeMat); eyeR.position.set(-0.15, 2.75, 1.85); g.add(eyeR);
+    g.userData.parts = { lFL: aL, lFR: aR, lBL, lBR, head, tail };
+  }
+  else if (archetype === 'biped-pred-large'){
+    // Big predator silhouette (Allo / T-Rex / Spino base shape).
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.7, 3.4), bodyMat);
+    body.position.y = 2.0; g.add(body);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 3.2), bellyMat);
+    belly.position.y = 1.5; g.add(belly);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 1.8), bodyMat);
+    head.position.set(0, 2.6, 2.4); g.add(head);
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.32, 1.4), crestMat);
+    jaw.position.set(0, 2.1, 2.6); g.add(jaw);
+    // Spinal ridge — for spino this becomes a tall sail
+    const isSpino = species === 'spino' || species === 'void_spino';
+    if (isSpino){
+      for (let i = 0; i < 5; i++){
+        const z = -1.0 + i * 0.7;
+        const h = 1.4 + Math.sin(i / 4 * Math.PI) * 1.2;
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.18, h, 0.6), crestMat);
+        fin.position.set(0, 2.0 + h/2, z);
+        g.add(fin);
+      }
+    } else {
+      const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 3.2), crestMat);
+      ridge.position.set(0, 2.95, 0); g.add(ridge);
+    }
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.6, 3.4, 6), bodyMat);
+    tail.position.set(0, 1.7, -3.0); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.5, 1.9, 0.55);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.5, 0.95, 0.0); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.5, 0.95, 0.0); g.add(lBR);
+    const armGeo = new THREE.BoxGeometry(0.22, 0.6, 0.22);
+    const aL = new THREE.Mesh(armGeo, bodyMat); aL.position.set( 0.85, 1.9, 1.1); aL.rotation.x = 0.5; g.add(aL);
+    const aR = new THREE.Mesh(armGeo, bodyMat); aR.position.set(-0.85, 1.9, 1.1); aR.rotation.x = 0.5; g.add(aR);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), eyeMat); eyeL.position.set( 0.32, 2.75, 3.1); g.add(eyeL);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), eyeMat); eyeR.position.set(-0.32, 2.75, 3.1); g.add(eyeR);
+    g.userData.parts = { lFL: aL, lFR: aR, lBL, lBR, head, tail };
+  }
+  else if (archetype === 'quad-plate'){
+    // Stegosaurus-style: stocky quad with back plates.
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.6, 3.4), bodyMat);
+    body.position.y = 1.5; g.add(body);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.5, 3.2), bellyMat);
+    belly.position.y = 0.95; g.add(belly);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 1.0), bodyMat);
+    head.position.set(0, 1.3, 2.4); g.add(head);
+    // Back plates (kite-shaped pairs along spine)
+    for (let i = 0; i < 6; i++){
+      const z = -1.6 + i * 0.6;
+      const ang = i % 2 === 0 ? 0.15 : -0.15;
+      const plate = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.0, 4), crestMat);
+      plate.position.set(ang * 0.4, 2.5, z);
+      plate.rotation.set(0, 0, ang * 0.8);
+      g.add(plate);
+    }
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.6, 3.0, 6), bodyMat);
+    tail.position.set(0, 1.3, -3.0); tail.rotation.x = -Math.PI/2; g.add(tail);
+    // Thagomizer spikes
+    for (let i = 0; i < 4; i++){
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6, 6), crestMat);
+      sp.position.set((i < 2 ? 0.18 : -0.18), 1.5 + (i % 2) * 0.2, -3.5);
+      sp.rotation.x = -1.6 + i * 0.1; g.add(sp);
+    }
+    const legGeo = new THREE.BoxGeometry(0.55, 1.5, 0.6);
+    const lFL = new THREE.Mesh(legGeo, bodyMat); lFL.position.set( 0.7, 0.75, 1.0); g.add(lFL);
+    const lFR = new THREE.Mesh(legGeo, bodyMat); lFR.position.set(-0.7, 0.75, 1.0); g.add(lFR);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.7, 0.75,-1.0); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.7, 0.75,-1.0); g.add(lBR);
+    g.userData.parts = { lFL, lFR, lBL, lBR, head, tail };
+  }
+  else if (archetype === 'sauropod'){
+    // Long-neck silhouette — works for brachi/plesi/mosa with palette swap.
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 3.2), bodyMat);
+    body.position.y = 1.7; g.add(body);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.5, 3.0), bellyMat);
+    belly.position.y = 1.15; g.add(belly);
+    // Neck = stack of cylinders for long curve
+    const neckGroup = new THREE.Group();
+    for (let i = 0; i < 5; i++){
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.42 - i * 0.04, 0.5 - i * 0.04, 0.6, 6), bodyMat);
+      seg.position.set(0, i * 0.5, 0); seg.rotation.x = -0.3 - i * 0.04;
+      neckGroup.add(seg);
+    }
+    neckGroup.position.set(0, 1.9, 1.4);
+    g.add(neckGroup);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 1.0), bodyMat);
+    head.position.set(0, 4.0, 2.4); g.add(head);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.55, 3.6, 6), bodyMat);
+    tail.position.set(0, 1.6, -3.0); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.55, 1.7, 0.6);
+    const lFL = new THREE.Mesh(legGeo, bodyMat); lFL.position.set( 0.75, 0.85, 0.9); g.add(lFL);
+    const lFR = new THREE.Mesh(legGeo, bodyMat); lFR.position.set(-0.75, 0.85, 0.9); g.add(lFR);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.75, 0.85,-1.0); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.75, 0.85,-1.0); g.add(lBR);
+    g.userData.parts = { lFL, lFR, lBL, lBR, head, tail };
+  }
+  else if (archetype === 'pterosaur'){
+    // Flier — flat body with two wide wings.
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 1.6), bodyMat);
+    body.position.y = 1.4; g.add(body);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.8), bodyMat);
+    head.position.set(0, 1.55, 1.2); g.add(head);
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.12, 1.0, 6), crestMat);
+    beak.position.set(0, 1.55, 1.9); beak.rotation.x = -Math.PI/2; g.add(beak);
+    const crest = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.0, 6), crestMat);
+    crest.position.set(0, 2.0, 0.9); crest.rotation.set(-0.8, 0, 0); g.add(crest);
+    // Wings as triangular fans
+    const wingMat = toonMat(palette.body, { flatShading:true, side: THREE.DoubleSide });
+    const wingGeoL = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0), new THREE.Vector3(3.4, 0.1, 0.6), new THREE.Vector3(0, 0, -0.6)
+    ]);
+    wingGeoL.computeVertexNormals();
+    const wingL = new THREE.Mesh(wingGeoL, wingMat);
+    wingL.position.set(0.3, 1.4, 0); g.add(wingL);
+    const wingGeoR = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0), new THREE.Vector3(-3.4, 0.1, 0.6), new THREE.Vector3(0, 0, -0.6)
+    ]);
+    wingGeoR.computeVertexNormals();
+    const wingR = new THREE.Mesh(wingGeoR, wingMat);
+    wingR.position.set(-0.3, 1.4, 0); g.add(wingR);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.2, 6), bodyMat);
+    tail.position.set(0, 1.35, -1.0); tail.rotation.x = -Math.PI/2; g.add(tail);
+    const legGeo = new THREE.BoxGeometry(0.12, 0.4, 0.14);
+    const lBL = new THREE.Mesh(legGeo, bodyMat); lBL.position.set( 0.12, 1.1, 0.0); g.add(lBL);
+    const lBR = new THREE.Mesh(legGeo, bodyMat); lBR.position.set(-0.12, 1.1, 0.0); g.add(lBR);
+    // Pterosaurs flap rather than walk — alias parts so animator drives wings.
+    g.userData.parts = { lFL: wingL, lFR: wingR, lBL, lBR, head, tail, flap: true };
+  }
+  else {
+    // Fallback: tiny placeholder cube so unknown archetypes still render.
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1.2), bodyMat);
+    m.position.y = 0.6; g.add(m);
+    g.userData.parts = {};
+  }
+
+  // Bioluminescent / legendary glow shell
+  if (spec.glow){
+    const halo = addGlow(g, 1.4 + (spec.size || 1) * 0.8, spec.glow);
+    halo.position.y = (spec.size || 1) * 1.6;
+    g.userData.glow = halo;
   }
   g.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
   return g;
@@ -2110,12 +2426,7 @@ class Dino {
     this.stateTimer = 0;
     this.target = new THREE.Vector3();
     this.scale = scale;
-    // species-specific stats
-    const profile = {
-      parasaur: { speed: 7.0, sprintSpeed: 12.5, fleeRadius: 22, alertRadius: 32, calm: 1.0, hp:  80, diet:'herb', size:1.0, damage: 8,  xp: 24, hitReach: 2.0 },
-      raptor:   { speed: 6.0, sprintSpeed: 14.0, fleeRadius: 0,  alertRadius: 28, calm: 0.4, hp:  60, diet:'carn', size:0.8, damage: 14, xp: 38, hitReach: 2.0 },
-      trike:    { speed: 5.0, sprintSpeed: 10.0, fleeRadius: 0,  alertRadius: 18, calm: 0.7, hp: 180, diet:'herb', size:1.3, damage: 28, xp: 90, hitReach: 3.2 },
-    }[species];
+    const profile = SPECIES[species] || SPECIES.parasaur;
     this.profile = profile;
     this.hpMax = profile.hp;
     this.hp = profile.hp;
@@ -2184,6 +2495,11 @@ class Dino {
     spawnLoot(this.species, this.pos.x, this.pos.y, this.pos.z);
     if (LOCK.target === this){ LOCK.target = null; LOCK.active = false; hideLockUI(); }
     if (SCAN.target === this) SCAN.target = null;
+    if (typeof onKill === 'function' && !this._countedDeath){
+      this._countedDeath = true;
+      onKill(this);
+    }
+    if (typeof AUDIO !== 'undefined') AUDIO.roar(this.species, 0.3);
   }
 
   remove(){
@@ -2434,25 +2750,43 @@ class Dino {
   }
 }
 
-/* Spawn dinos across biomes. */
+/* Spawn dinos across biomes — wider Stage IV roster.
+   Each species has a preferred biome list; we steer placement toward those. */
 const dinos = [];
+const SPAWN_LIST = [
+  { sp:'parasaur',    n: 6, biomes:['plains'] },
+  { sp:'raptor',      n: 4, biomes:['plains','bayou','desert'] },
+  { sp:'trike',       n: 3, biomes:['plains','tundra','desert'] },
+  { sp:'compy',       n: 5, biomes:['plains','bayou','crystal'] },
+  { sp:'gallimimus',  n: 4, biomes:['plains','desert'] },
+  { sp:'dilo',        n: 3, biomes:['volcano','bayou'] },
+  { sp:'iguanodon',   n: 2, biomes:['plains'] },
+  { sp:'pachy',       n: 2, biomes:['plains','desert'] },
+  { sp:'stego',       n: 2, biomes:['plains','tundra'] },
+  { sp:'anky',        n: 2, biomes:['tundra','desert'] },
+  { sp:'therizino',   n: 2, biomes:['plains','crystal'] },
+  { sp:'carno',       n: 2, biomes:['desert','volcano'] },
+  { sp:'bio_para',    n: 2, biomes:['bayou','crystal'] },
+  { sp:'brachi',      n: 1, biomes:['plains'] },
+  { sp:'pteran',      n: 3, biomes:['plains','crystal','desert'] },
+  { sp:'allo',        n: 1, biomes:['plains','volcano'] },
+  { sp:'magma_carno', n: 1, biomes:['volcano'] },
+  { sp:'frost_theri', n: 1, biomes:['tundra'] },
+];
 function spawnDinos(){
   const rng = mulberry32(WORLD.seed + 101);
-  const profiles = [
-    { sp:'parasaur', n: 18 },
-    { sp:'raptor',   n: 10 },
-    { sp:'trike',    n: 6 },
-  ];
-  for (const cfg of profiles){
+  for (const cfg of SPAWN_LIST){
     let placed = 0, attempts = 0;
-    while (placed < cfg.n && attempts < cfg.n * 8){
+    while (placed < cfg.n && attempts < cfg.n * 14){
       attempts++;
       const x = (rng() - 0.5) * WORLD.size * 1.7;
       const z = (rng() - 0.5) * WORLD.size * 1.7;
       const h = heightAt(x, z);
       if (h < -1) continue;
-      // avoid spawning too close to player spawn
       if (Math.hypot(x - PLAYER.pos.x, z - PLAYER.pos.z) < 30) continue;
+      // Bias to preferred biomes (50% allow elsewhere so the world doesn't feel quantised)
+      const b = biomeAt(x, z);
+      if (cfg.biomes && cfg.biomes.indexOf(b.id) === -1 && rng() > 0.35) continue;
       const scale = 0.9 + rng() * 0.4;
       dinos.push(new Dino(cfg.sp, x, z, scale));
       placed++;
@@ -2674,6 +3008,8 @@ function completeTame(d){
   spawnFloater(`Tamed · ${entry.name.split(' ')[0]}`, 'pickup',
     new THREE.Vector3(d.pos.x, d.pos.y + d.profile.size * 2.4, d.pos.z));
   showBanner(`Tamed ${DINODEX[d.species]?.name || d.species}`, 2200);
+  if (typeof onTame === 'function') onTame(d);
+  if (typeof AUDIO !== 'undefined') AUDIO.pickup(0.4);
   // Remove the wild dino (it's now stabled at Roost)
   d.remove();
   // Set as active if no current companion
@@ -2893,6 +3229,8 @@ document.querySelectorAll('[data-roost]').forEach(el => {
       }
       closeModals();
       showBanner('You rested · dawn breaks', 2200);
+      onRoostRest();
+      rollDailyContract();
     } else if (act === 'skills'){
       closeModals();
       refreshSkillUI();
@@ -2925,9 +3263,30 @@ document.querySelectorAll('[data-roost]').forEach(el => {
           saveGame();
         });
       });
+    } else if (act === 'quests'){
+      closeModals();
+      rollDailyContract();
+      refreshQuestUI();
+      openModal('modal-quests');
+    } else if (act === 'dex'){
+      closeModals();
+      refreshDexUI();
+      openModal('modal-dex');
+    } else if (act === 'photo'){
+      closeModals();
+      togglePhoto();
     } else if (act === 'leave'){
       closeModals();
     }
+  });
+});
+
+// Photo bar buttons
+document.querySelectorAll('[data-photo]').forEach(b => {
+  b.addEventListener('click', () => {
+    const act = b.dataset.photo;
+    if (act === 'exit') togglePhoto();
+    else if (act === 'snap') capturePhoto();
   });
 });
 
@@ -2972,6 +3331,483 @@ const $ctxPrompt = document.getElementById('ctx-prompt');
 
 spawnRoost();
 refreshSkillUI();
+
+/* ---------- 10c. Stage IV: Audio, Quests, Dino-dex, Photo, PWA -------- */
+
+/* === AUDIO ============================================================ */
+/* All sounds synthesised via Web Audio. Two adaptive music layers
+   (exploration / combat) crossfade on combat state. */
+const AUDIO = {
+  ctx: null,
+  master: null,
+  ambient: null,
+  music: null,
+  combatMood: 0,        // 0 explore .. 1 combat
+  enabled: true,
+
+  init(){
+    if (this.ctx) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC){ this.enabled = false; return; }
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.5;
+      this.master.connect(this.ctx.destination);
+      this._startMusic();
+      this._startAmbient();
+    } catch (e){ this.enabled = false; }
+  },
+  resume(){ try { this.ctx?.resume(); } catch(_){} },
+
+  _noiseBuf(dur){
+    const n = (dur * this.ctx.sampleRate) | 0;
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    return src;
+  },
+
+  roar(species, volume = 0.35){
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    // Pitch by size: bigger = lower
+    const size = (SPECIES[species]?.size) || 1;
+    const basePitch = 320 / Math.max(0.4, size * 1.4);
+    const dur = 0.55 + Math.random() * 0.5;
+    // Noise body
+    const src = this._noiseBuf(dur);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = basePitch * 1.2; bp.Q.value = 3;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = basePitch * 4;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(volume, now + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    src.connect(bp); bp.connect(lp); lp.connect(g); g.connect(this.master);
+    src.start(now);
+    // Tonal layer
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(basePitch, now);
+    osc.frequency.exponentialRampToValueAtTime(basePitch * 0.55, now + dur);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0, now);
+    og.gain.linearRampToValueAtTime(volume * 0.5, now + 0.1);
+    og.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    const olp = ctx.createBiquadFilter(); olp.type = 'lowpass'; olp.frequency.value = basePitch * 5;
+    osc.connect(olp); olp.connect(og); og.connect(this.master);
+    osc.start(now); osc.stop(now + dur);
+  },
+
+  hit(crit, volume = 0.32){
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const src = this._noiseBuf(0.07);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = crit ? 700 : 1500; bp.Q.value = 2;
+    const g = ctx.createGain(); g.gain.value = volume;
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    src.connect(bp); bp.connect(g); g.connect(this.master);
+    src.start(now);
+    const osc = ctx.createOscillator(); osc.type = 'triangle';
+    osc.frequency.setValueAtTime(crit ? 220 : 440, now);
+    osc.frequency.exponentialRampToValueAtTime(crit ? 60 : 160, now + 0.09);
+    const og = ctx.createGain(); og.gain.value = volume * 0.5;
+    og.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    osc.connect(og); og.connect(this.master);
+    osc.start(now); osc.stop(now + 0.09);
+  },
+
+  swing(volume = 0.18){
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const src = this._noiseBuf(0.16);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(8000, now);
+    lp.frequency.exponentialRampToValueAtTime(350, now + 0.16);
+    const g = ctx.createGain(); g.gain.value = volume;
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+    src.connect(lp); lp.connect(g); g.connect(this.master);
+    src.start(now);
+  },
+
+  pickup(volume = 0.22){
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.12);
+    const g = ctx.createGain(); g.gain.value = 0;
+    g.gain.linearRampToValueAtTime(volume, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc.connect(g); g.connect(this.master);
+    osc.start(now); osc.stop(now + 0.2);
+  },
+
+  shutter(){
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const src = this._noiseBuf(0.18);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+    const g = ctx.createGain(); g.gain.value = 0.3;
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    src.connect(lp); lp.connect(g); g.connect(this.master);
+    src.start(now);
+  },
+
+  _startMusic(){
+    const ctx = this.ctx;
+    const makeLayer = (notes, gainVal) => {
+      const out = ctx.createGain(); out.gain.value = gainVal;
+      const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 900;
+      filt.connect(out); out.connect(this.master);
+      for (const n of notes){
+        const osc = ctx.createOscillator(); osc.type = 'triangle';
+        osc.frequency.value = n;
+        const det = ctx.createOscillator(); det.frequency.value = 0.1 + Math.random() * 0.15;
+        const detGain = ctx.createGain(); detGain.gain.value = 4;
+        det.connect(detGain); detGain.connect(osc.detune);
+        osc.connect(filt); det.start(); osc.start();
+      }
+      return out;
+    };
+    this.music = {
+      // Warm major-ish chord for exploration
+      explore: makeLayer([130.81, 196.00, 261.63, 329.63], 0.18),
+      // Tense minor chord for combat
+      combat:  makeLayer([110.00, 164.81, 220.00, 261.63], 0),
+    };
+  },
+
+  _startAmbient(){
+    // Soft pink-noise wash, biome filter changes its tone.
+    const ctx = this.ctx;
+    const src = this._noiseBuf(2.0);
+    src.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 0.7;
+    const g = ctx.createGain(); g.gain.value = 0.06;
+    src.connect(bp); bp.connect(g); g.connect(this.master);
+    src.start();
+    this.ambient = { bp, g };
+  },
+
+  setBiome(id){
+    if (!this.ambient) return;
+    const settings = {
+      plains:  { freq: 700, gain: 0.06 },
+      volcano: { freq: 240, gain: 0.11 },
+      tundra:  { freq:1100, gain: 0.10 },
+      bayou:   { freq: 500, gain: 0.08 },
+      crystal: { freq:1400, gain: 0.07 },
+      desert:  { freq: 380, gain: 0.09 },
+    }[id] || { freq: 700, gain: 0.06 };
+    const now = this.ctx.currentTime;
+    this.ambient.bp.frequency.linearRampToValueAtTime(settings.freq, now + 1.5);
+    this.ambient.g.gain.linearRampToValueAtTime(settings.gain, now + 1.5);
+  },
+
+  setMusicMood(combat){
+    if (!this.music) return;
+    const now = this.ctx.currentTime;
+    this.music.explore.gain.linearRampToValueAtTime(combat ? 0.0 : 0.18, now + 1.5);
+    this.music.combat.gain.linearRampToValueAtTime(combat ? 0.32 : 0.0,  now + 1.5);
+  },
+};
+
+/* === QUEST SYSTEM ===================================================== */
+const QUEST_DEFS = {
+  'first-hunt':   { name:'First Hunt',     desc:'Defeat 3 wild dinos',          target:3, reward:{xp:80} },
+  'gentle-touch': { name:'Gentle Touch',   desc:'Tame your first dino',         target:1, reward:{xp:120, sp:1} },
+  'biome-walker': { name:'Biome Walker',   desc:'Visit 3 different biomes',     target:3, reward:{xp:80} },
+  'big-game':     { name:'Big Game',       desc:'Defeat a Rare-tier dino',      target:1, reward:{xp:200, sp:1} },
+  'apex-hunter':  { name:'Apex Hunter',    desc:'Defeat an Apex-tier dino',     target:1, reward:{xp:500, sp:2} },
+  'scan-master':  { name:'Scan Master',    desc:'Scan 8 different species',     target:8, reward:{xp:200} },
+  'pack-leader':  { name:'Pack Leader',    desc:'Tame 3 different species',     target:3, reward:{xp:300, sp:1} },
+  'photog':       { name:'Photog',         desc:'Take a photo of any dino',     target:1, reward:{xp:60} },
+  'roost-rest':   { name:'Hearth Bond',    desc:'Rest at the Roost',            target:1, reward:{xp:40} },
+  'world-shaker': { name:'World-Shaker',   desc:'Defeat the Void Spinosaurus',  target:1, reward:{xp:5000, sp:5} },
+};
+
+const STARTER_QUESTS = ['first-hunt','gentle-touch','biome-walker','scan-master','photog','roost-rest','world-shaker'];
+
+const QUESTS = {
+  active: [],
+  progress: {},
+  completed: [],
+  tamedSpecies: new Set(),
+  scannedSpecies: new Set(),
+  visitedBiomes: new Set(),
+  dailyId: null,
+  dailyDay: -1,
+};
+
+function ensureStarterQuests(){
+  for (const id of STARTER_QUESTS){
+    if (!QUESTS.active.includes(id) && !QUESTS.completed.includes(id)){
+      QUESTS.active.push(id);
+      QUESTS.progress[id] = QUESTS.progress[id] || 0;
+    }
+  }
+}
+function rollDailyContract(){
+  if (QUESTS.dailyDay === TIME.day) return;
+  QUESTS.dailyDay = TIME.day;
+  const pool = ['big-game','apex-hunter','pack-leader'];
+  QUESTS.dailyId = pick(pool);
+  if (!QUESTS.active.includes(QUESTS.dailyId)){
+    QUESTS.active.push(QUESTS.dailyId);
+    QUESTS.progress[QUESTS.dailyId] = 0;
+    showBanner(`Daily contract · ${QUEST_DEFS[QUESTS.dailyId].name}`, 2200);
+  }
+}
+function progressQuest(id, delta = 1){
+  if (!QUESTS.active.includes(id)) return;
+  QUESTS.progress[id] = (QUESTS.progress[id] || 0) + delta;
+  const def = QUEST_DEFS[id];
+  if (QUESTS.progress[id] >= def.target) completeQuest(id);
+  refreshQuestUI();
+}
+function completeQuest(id){
+  const def = QUEST_DEFS[id];
+  QUESTS.active = QUESTS.active.filter(q => q !== id);
+  if (!QUESTS.completed.includes(id)) QUESTS.completed.push(id);
+  if (def.reward.xp) gainXP(def.reward.xp);
+  if (def.reward.sp){ SKILLS.points += def.reward.sp; refreshSkillUI(); }
+  showBanner(`✓ ${def.name} complete · +${def.reward.xp || 0} XP${def.reward.sp ? ' +' + def.reward.sp + ' SP' : ''}`, 2600);
+  AUDIO.pickup(0.4);
+  refreshQuestUI();
+  saveGame();
+}
+
+/* Quest hook events */
+function onKill(d){
+  progressQuest('first-hunt');
+  if (d.profile.tier === 'rare')      progressQuest('big-game');
+  if (d.profile.tier === 'apex')      progressQuest('apex-hunter');
+  if (d.profile.tier === 'legendary') progressQuest('apex-hunter');
+  if (d.species === 'void_spino')     progressQuest('world-shaker');
+  DEX.killed[d.species] = (DEX.killed[d.species] || 0) + 1;
+  refreshDexUI();
+}
+function onTame(d){
+  QUESTS.tamedSpecies.add(d.species);
+  progressQuest('gentle-touch');
+  const old = QUESTS.tamedSpecies.size;
+  if (old > (QUESTS.progress['pack-leader'] || 0)){
+    QUESTS.progress['pack-leader'] = old;
+    if (old >= 3 && QUESTS.active.includes('pack-leader')) completeQuest('pack-leader');
+  }
+  DEX.tamed[d.species] = true;
+  refreshDexUI();
+}
+function onScan(species){
+  if (QUESTS.scannedSpecies.has(species)) return;
+  QUESTS.scannedSpecies.add(species);
+  progressQuest('scan-master', 0); // refresh
+  if (QUESTS.active.includes('scan-master')){
+    QUESTS.progress['scan-master'] = QUESTS.scannedSpecies.size;
+    if (QUESTS.progress['scan-master'] >= 8) completeQuest('scan-master');
+  }
+  DEX.scanned[species] = true;
+  refreshDexUI();
+}
+function onBiomeEnter(id){
+  if (QUESTS.visitedBiomes.has(id)) return;
+  QUESTS.visitedBiomes.add(id);
+  if (QUESTS.active.includes('biome-walker')){
+    QUESTS.progress['biome-walker'] = QUESTS.visitedBiomes.size;
+    if (QUESTS.progress['biome-walker'] >= 3) completeQuest('biome-walker');
+  }
+}
+function onRoostRest(){
+  if (QUESTS.active.includes('roost-rest')){
+    completeQuest('roost-rest');
+  }
+}
+
+function refreshQuestUI(){
+  const ul = document.getElementById('quest-list');
+  if (!ul) return;
+  ul.innerHTML = '';
+  if (QUESTS.active.length === 0){
+    ul.innerHTML = '<div class="empty">All caught up. Rest at the Roost to roll a new daily.</div>';
+    return;
+  }
+  for (const id of QUESTS.active){
+    const def = QUEST_DEFS[id]; if (!def) continue;
+    const p = QUESTS.progress[id] || 0;
+    const node = document.createElement('div');
+    node.className = 'quest';
+    const pct = Math.min(1, p / def.target);
+    node.innerHTML = `<div class="row"><div class="nm">${def.name}</div><div class="ct">${Math.min(p, def.target)}/${def.target}</div></div>
+      <div class="dx">${def.desc}</div>
+      <div class="bar"><i style="width:${(pct*100).toFixed(0)}%"></i></div>
+      <div class="rw">+${def.reward.xp || 0} XP${def.reward.sp ? ' · +'+def.reward.sp+' SP' : ''}</div>`;
+    ul.appendChild(node);
+  }
+}
+
+/* === DINO-DEX ========================================================= */
+const DEX = {
+  scanned: {},  // species -> true
+  killed:  {},  // species -> count
+  tamed:   {},  // species -> true
+  mythic:  false,
+};
+
+function dexCompletion(){
+  const total = Object.keys(SPECIES).length;
+  const found = Object.keys(DEX.scanned).length;
+  return { found, total, pct: total ? Math.round(found / total * 100) : 0 };
+}
+
+function refreshDexUI(){
+  const list = document.getElementById('dex-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const id in SPECIES){
+    const info = SPECIES[id];
+    const scanned = !!DEX.scanned[id];
+    const killed  = DEX.killed[id] || 0;
+    const tamed   = !!DEX.tamed[id];
+    const tierClr = '#' + (TIER_COLORS[info.tier] || 0xb0c8be).toString(16).padStart(6, '0');
+    const bodyClr = '#' + info.palette.body.toString(16).padStart(6, '0');
+    const node = document.createElement('div');
+    node.className = 'dex-card t-' + info.tier + (scanned ? ' on' : '');
+    node.innerHTML = scanned
+      ? `<div class="icn" style="background:${bodyClr};box-shadow:0 0 10px ${bodyClr}55"></div>
+         <div class="nm">${info.dexName}</div>
+         <div class="tier" style="color:${tierClr}">${TIER_LABELS[info.tier]}</div>
+         <div class="met">⚔ ${killed} · ${tamed ? '✓ tamed' : '— wild'}</div>`
+      : `<div class="icn" style="background:#222"></div>
+         <div class="nm">??? · ${TIER_LABELS[info.tier]}</div>
+         <div class="met">scan to reveal</div>`;
+    list.appendChild(node);
+  }
+  const c = dexCompletion();
+  const meter = document.getElementById('dex-meter');
+  if (meter){
+    meter.querySelector('.t').textContent = `${c.found} / ${c.total} · ${c.pct}%`;
+    meter.querySelector('.fill').style.width = c.pct + '%';
+  }
+  if (c.pct === 100 && !DEX.mythic){
+    DEX.mythic = true;
+    showBanner('✦ MYTHIC SKIN UNLOCKED ✦', 3200);
+    AUDIO.pickup(0.6);
+    saveGame();
+  }
+}
+
+/* === PHOTO MODE ======================================================= */
+const PHOTO = {
+  active: false,
+  prev: { yaw:0, pitch:0, dist:0 },
+};
+function togglePhoto(){
+  PHOTO.active = !PHOTO.active;
+  document.body.classList.toggle('photo-mode', PHOTO.active);
+  document.getElementById('photo-bar').classList.toggle('show', PHOTO.active);
+  if (PHOTO.active){
+    PHOTO.prev.yaw = CAM.yaw;
+    PHOTO.prev.pitch = CAM.pitch;
+    PHOTO.prev.dist = CAM.dist;
+    showBanner('Photo mode · drag to frame', 1600);
+  } else {
+    CAM.yaw = PHOTO.prev.yaw;
+    CAM.pitch = PHOTO.prev.pitch;
+    CAM.dist = PHOTO.prev.dist;
+  }
+}
+function capturePhoto(){
+  // Render one frame and pull the canvas pixels.
+  renderer.render(scene, camera);
+  const url = renderer.domElement.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `saurian-frontier-${Date.now()}.png`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  AUDIO.shutter();
+  showBanner('✦ photo saved to downloads', 2000);
+  progressQuest('photog');
+}
+
+/* === PWA — inline manifest + minimal service worker ================== */
+function setupPWA(){
+  // Inline manifest as a data URL so the file remains a single artifact.
+  const manifest = {
+    name: 'Saurian Frontier',
+    short_name: 'Saurian',
+    start_url: location.href,
+    display: 'fullscreen',
+    orientation: 'any',
+    background_color: '#07120e',
+    theme_color: '#0a1a14',
+    icons: [{ src:'data:image/svg+xml;utf8,'+encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" fill="%230a1a14"/><circle cx="96" cy="96" r="58" fill="%237cf2c8"/></svg>'),
+      sizes:'192x192', type:'image/svg+xml' }],
+  };
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'}));
+  document.head.appendChild(link);
+
+  // Cache-only service worker (best-effort; may be blocked on some platforms).
+  const SW_SRC = `
+    const CACHE = 'saurian-v4';
+    self.addEventListener('install', e => { self.skipWaiting(); });
+    self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+    self.addEventListener('fetch', e => {
+      e.respondWith((async () => {
+        try { const net = await fetch(e.request); const c = await caches.open(CACHE); c.put(e.request, net.clone()); return net; }
+        catch(_) { const cached = await caches.match(e.request); return cached || Response.error(); }
+      })());
+    });
+  `;
+  if ('serviceWorker' in navigator){
+    try {
+      const swURL = URL.createObjectURL(new Blob([SW_SRC], {type:'application/javascript'}));
+      navigator.serviceWorker.register(swURL).catch(()=>{});
+    } catch(_){}
+  }
+}
+setupPWA();
+
+/* Hooks are inlined into the original functions below. */
+
+/* Occasionally pick a nearby dino to roar — feels like the world is alive. */
+let _roarCD = 4;
+function updateAmbientRoars(dt){
+  if (!AUDIO.ctx) return;
+  _roarCD -= dt;
+  if (_roarCD > 0) return;
+  _roarCD = 5 + Math.random() * 8;
+  // Find a dino in earshot
+  const candidates = dinos.filter(d => !d.dying && !d.tamed && d.pos.distanceToSquared(PLAYER.pos) < 120 * 120);
+  if (candidates.length === 0) return;
+  const d = pick(candidates);
+  AUDIO.roar(d.species, 0.18 + Math.random() * 0.12);
+}
+
+/* Music + ambient should react to combat presence and biome. */
+function updateAudioMood(dt){
+  if (!AUDIO.ctx) return;
+  // Combat mood: 1 if any hostile in 30u, else 0
+  let inCombat = false;
+  for (const d of dinos){
+    if (d.tamed || d.dying) continue;
+    if (d.pos.distanceToSquared(PLAYER.pos) < 30 * 30){ inCombat = true; break; }
+  }
+  AUDIO.combatMood = lerp(AUDIO.combatMood, inCombat ? 1 : 0, Math.min(1, dt * 1.5));
+  AUDIO.setMusicMood(AUDIO.combatMood > 0.5);
+}
+
+/* === Modal triggers for quest + dex + photo ========================== */
+addEventListener('keydown', e => {
+  if (e.code === 'KeyQ' && e.shiftKey){ refreshQuestUI(); openModal('modal-quests'); e.preventDefault(); }
+  if (e.code === 'KeyB'){ refreshDexUI(); openModal('modal-dex'); }
+  if (e.code === 'KeyP'){ togglePhoto(); }
+});
 
 /* ---------- 11. Day/night cycle --------------------------------------- */
 
@@ -3055,6 +3891,8 @@ function updateHUD(){
     banner.classList.add('show');
     clearTimeout(banner._hideT);
     banner._hideT = setTimeout(() => banner.classList.remove('show'), 2400);
+    if (typeof AUDIO !== 'undefined') AUDIO.setBiome(b.id);
+    if (typeof onBiomeEnter === 'function') onBiomeEnter(b.id);
   }
   drawMinimap();
 }
@@ -3104,7 +3942,7 @@ function drawMinimap(){
 
 /* ---------- 13. Save / load (minimal Stage 1) ------------------------- */
 
-const SAVE_KEY = 'saurian.stage3.v1';
+const SAVE_KEY = 'saurian.stage4.v1';
 function save(){
   try {
     const activeIdx = (typeof ROOST !== 'undefined' && COMPANION.dino?.entry)
@@ -3120,6 +3958,14 @@ function save(){
       skills: (typeof SKILLS !== 'undefined') ? SKILLS : null,
       tamed:  (typeof ROOST !== 'undefined') ? ROOST.tamedDinos : [],
       activeIdx,
+      quests: (typeof QUESTS !== 'undefined') ? {
+        active: QUESTS.active, progress: QUESTS.progress, completed: QUESTS.completed,
+        tamedSpecies: [...QUESTS.tamedSpecies],
+        scannedSpecies: [...QUESTS.scannedSpecies],
+        visitedBiomes: [...QUESTS.visitedBiomes],
+        dailyId: QUESTS.dailyId, dailyDay: QUESTS.dailyDay,
+      } : null,
+      dex: (typeof DEX !== 'undefined') ? { scanned: DEX.scanned, killed: DEX.killed, tamed: DEX.tamed, mythic: DEX.mythic } : null,
     }));
   } catch(_){}
 }
@@ -3154,9 +4000,24 @@ function load(){
     if (Array.isArray(s.tamed) && typeof ROOST !== 'undefined'){
       ROOST.tamedDinos = s.tamed;
       if (typeof s.activeIdx === 'number' && s.activeIdx >= 0 && s.activeIdx < s.tamed.length){
-        // Defer summoning to the next tick so scene + dinos array is ready
         setTimeout(() => summonCompanion(s.tamed[s.activeIdx]), 0);
       }
+    }
+    if (s.quests && typeof QUESTS !== 'undefined'){
+      QUESTS.active = s.quests.active || [];
+      QUESTS.progress = s.quests.progress || {};
+      QUESTS.completed = s.quests.completed || [];
+      QUESTS.tamedSpecies = new Set(s.quests.tamedSpecies || []);
+      QUESTS.scannedSpecies = new Set(s.quests.scannedSpecies || []);
+      QUESTS.visitedBiomes = new Set(s.quests.visitedBiomes || []);
+      QUESTS.dailyId = s.quests.dailyId || null;
+      QUESTS.dailyDay = typeof s.quests.dailyDay === 'number' ? s.quests.dailyDay : -1;
+    }
+    if (s.dex && typeof DEX !== 'undefined'){
+      DEX.scanned = s.dex.scanned || {};
+      DEX.killed  = s.dex.killed  || {};
+      DEX.tamed   = s.dex.tamed   || {};
+      DEX.mythic  = !!s.dex.mythic;
     }
   } catch(_){}
 }
@@ -3196,6 +4057,8 @@ function loop(now){
     updateRoost(dt);
     updateCompanionUI();
     updateContextPrompt();
+    updateAudioMood(dtRaw);
+    updateAmbientRoars(dtRaw);
     updateTime(dt);
     updateCamera(dtRaw);
 
@@ -3262,8 +4125,17 @@ bootStart.addEventListener('click', () => {
   boot.style.pointerEvents = 'none';
   setTimeout(() => boot.classList.add('hidden'), 800);
   last = performance.now();
-  setTimeout(() => showBanner('weaken · tame · ride', 2400), 900);
+  AUDIO.init();
+  AUDIO.resume();
+  ensureStarterQuests();
+  rollDailyContract();
+  refreshQuestUI();
+  refreshDexUI();
+  setTimeout(() => showBanner('hunt · bond · ride · shape the dex', 2600), 900);
 });
+// Resume audio on any tap (mobile autoplay policy)
+addEventListener('touchstart', () => AUDIO.resume(), { once: true, passive: true });
+addEventListener('mousedown',  () => AUDIO.resume(), { once: true });
 
 })();
 </script>
