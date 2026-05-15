@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0220" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>STACK! — Neon Tower</title>
+<style>
+  :root {
+    --bg-top: #1a0533;
+    --bg-bot: #04010f;
+    --ink: #f4f1ff;
+    --accent: #ff3df0;
+    --accent-2: #29e7ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    background: radial-gradient(120% 80% at 50% 0%, var(--bg-top) 0%, var(--bg-bot) 70%);
+  }
+  #stage { position: fixed; inset: 0; display: block; }
+  #hud {
+    position: fixed; top: env(safe-area-inset-top, 16px); left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 18px 22px; pointer-events: none; z-index: 5;
+  }
+  .badge {
+    font-variant-numeric: tabular-nums; letter-spacing: 0.06em;
+    text-transform: uppercase; font-size: 12px; opacity: 0.75;
+  }
+  .num {
+    font-size: 44px; font-weight: 800; line-height: 1; margin-top: 4px;
+    text-shadow: 0 0 18px rgba(255,61,240,0.55);
+  }
+  .right { text-align: right; }
+  .right .num { text-shadow: 0 0 18px rgba(41,231,255,0.55); }
+  #combo {
+    position: fixed; left: 50%; top: 28%; transform: translate(-50%, -50%) scale(0.6);
+    font-size: 28px; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; opacity: 0; pointer-events: none;
+    text-shadow: 0 0 24px var(--accent);
+    z-index: 6;
+    transition: opacity 0.25s ease, transform 0.35s cubic-bezier(.2,1.4,.5,1);
+  }
+  #combo.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px; z-index: 10;
+    background: radial-gradient(60% 60% at 50% 50%, rgba(10,2,30,0.65) 0%, rgba(0,0,0,0.92) 100%);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    text-align: center; padding: 0 28px;
+    transition: opacity 0.35s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  .title {
+    font-size: 64px; font-weight: 900; letter-spacing: 0.08em;
+    background: linear-gradient(120deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 40px rgba(255,61,240,0.35);
+  }
+  .subtitle { opacity: 0.78; font-size: 15px; line-height: 1.5; max-width: 320px; }
+  .cta {
+    margin-top: 18px; pointer-events: auto;
+    padding: 16px 36px; border-radius: 999px;
+    border: 1.5px solid rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.05);
+    color: var(--ink); font-weight: 700; font-size: 16px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.2s ease;
+    box-shadow: 0 0 30px rgba(255,61,240,0.25);
+  }
+  .cta:active { transform: scale(0.97); background: rgba(255,255,255,0.12); }
+  .stats { display: flex; gap: 28px; margin-top: 10px; }
+  .stat .badge { display: block; }
+  .stat .v { font-size: 32px; font-weight: 800; }
+  .hint { opacity: 0.55; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div id="hud">
+    <div>
+      <div class="badge">Score</div>
+      <div class="num" id="score">0</div>
+    </div>
+    <div class="right">
+      <div class="badge">Best</div>
+      <div class="num" id="best">0</div>
+    </div>
+  </div>
+
+  <div id="combo"></div>
+
+  <div id="overlay">
+    <div class="title">STACK!</div>
+    <div class="subtitle">Tap anywhere to drop the moving block. Land it flush for a perfect — overhang gets sliced off forever. How high can you build?</div>
+    <div class="stats">
+      <div class="stat"><span class="badge">Best</span><span class="v" id="bestOver">0</span></div>
+      <div class="stat"><span class="badge">Last</span><span class="v" id="lastOver">0</span></div>
+    </div>
+    <button class="cta" id="start">Tap to play</button>
+    <div class="hint">tap • drop • survive</div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('start');
+  const bestOver = document.getElementById('bestOver');
+  const lastOver = document.getElementById('lastOver');
+  const comboEl = document.getElementById('combo');
+
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', resize);
+  resize();
+
+  // ---- Isometric helpers ----
+  // Block has size {x: depth, z: width} in tiles. We render with an isometric projection.
+  const ISO = 0.5; // y-compression for isometric look
+  function project(wx, wy, wz, camY) {
+    // wx: horizontal axis (left-right), wz: depth (into screen), wy: vertical (height)
+    // Returns screen coords
+    const sx = W / 2 + (wx - wz) * 0.8;
+    const sy = H * 0.72 + (wx + wz) * 0.4 * ISO - wy + camY;
+    return [sx, sy];
+  }
+
+  // ---- Game state ----
+  const BASE_W = 110;   // tile horizontal extent
+  const BASE_D = 110;   // tile depth extent
+  const BLOCK_H = 28;
+  let stack = [];       // {x, z, w, d, y, color}
+  let moving = null;    // moving block
+  let camY = 0;
+  let targetCamY = 0;
+  let score = 0;
+  let best = parseInt(localStorage.getItem('stack-best') || '0', 10);
+  let last = parseInt(localStorage.getItem('stack-last') || '0', 10);
+  let combo = 0;
+  let running = false;
+  let particles = [];
+  let fallers = []; // sliced off pieces falling
+  let shake = 0;
+  let speed = 1.6;
+  let dir = 1;
+  let axis = 'x';      // alternates between x and z
+
+  function colorFor(i) {
+    // Smooth hue cycle through neon palette
+    const t = i * 0.07;
+    const h1 = (290 + Math.sin(t) * 60) % 360;
+    const h2 = (h1 + 35 + Math.cos(t * 0.7) * 15) % 360;
+    return [`hsl(${h1}, 95%, 62%)`, `hsl(${h2}, 95%, 50%)`, `hsl(${h1}, 90%, 35%)`];
+  }
+
+  function reset() {
+    stack = [];
+    fallers = [];
+    particles = [];
+    camY = 0; targetCamY = 0;
+    score = 0; combo = 0;
+    speed = 1.6;
+    axis = 'x'; dir = 1;
+    // base
+    stack.push({ x: 0, z: 0, w: BASE_W, d: BASE_D, y: 0, color: colorFor(0), born: 0 });
+    spawnMoving();
+    updateHUD();
+  }
+
+  function spawnMoving() {
+    const top = stack[stack.length - 1];
+    const i = stack.length;
+    const color = colorFor(i);
+    const startOff = 220;
+    moving = {
+      x: axis === 'x' ? -startOff * dir : top.x,
+      z: axis === 'z' ? -startOff * dir : top.z,
+      w: top.w, d: top.d,
+      y: top.y + BLOCK_H,
+      color, axis, dir, speed: speed,
+    };
+  }
+
+  function drop() {
+    if (!moving || !running) return;
+    const top = stack[stack.length - 1];
+    const axisKey = moving.axis;
+    const sizeKey = axisKey === 'x' ? 'w' : 'd';
+    const movPos = moving[axisKey];
+    const topPos = top[axisKey];
+    const movSize = moving[sizeKey];
+    const topSize = top[sizeKey];
+
+    const delta = movPos - topPos;
+    const absDelta = Math.abs(delta);
+
+    if (absDelta >= topSize) {
+      // total miss — block falls off and game over
+      const fallen = { ...moving, vy: 0, vx: (axisKey === 'x' ? Math.sign(delta) * 4 : 0), vz: (axisKey === 'z' ? Math.sign(delta) * 4 : 0), spin: (Math.random() - 0.5) * 0.06 };
+      fallers.push(fallen);
+      moving = null;
+      gameOver();
+      return;
+    }
+
+    const PERFECT = 4;
+    if (absDelta <= PERFECT) {
+      // perfect — snap, no shrink, small grow back
+      moving[axisKey] = topPos;
+      const newSize = Math.min(BASE_W, movSize + 4);
+      moving[sizeKey] = newSize;
+      combo++;
+      flashCombo(combo > 1 ? `PERFECT ×${combo}` : 'PERFECT');
+      vibrate(combo > 3 ? [12, 30, 12] : 18);
+      burst(moving, true);
+      score += 1 + combo;
+    } else {
+      const newSize = topSize - absDelta;
+      const newPos = (movPos + topPos) / 2 - Math.sign(delta) * (movSize - newSize) / 2 + Math.sign(delta) * (movSize - newSize) / 2;
+      // simpler: new center is the overlapping region's midpoint
+      const overlapStart = Math.max(movPos - movSize / 2, topPos - topSize / 2);
+      const overlapEnd = Math.min(movPos + movSize / 2, topPos + topSize / 2);
+      const centerNew = (overlapStart + overlapEnd) / 2;
+      // sliced piece (overhang)
+      const sliceSize = movSize - (overlapEnd - overlapStart);
+      const sliceCenter = movPos + Math.sign(delta) * (movSize / 2 - sliceSize / 2);
+      const slice = {
+        x: axisKey === 'x' ? sliceCenter : moving.x,
+        z: axisKey === 'z' ? sliceCenter : moving.z,
+        w: axisKey === 'x' ? sliceSize : moving.w,
+        d: axisKey === 'z' ? sliceSize : moving.d,
+        y: moving.y, color: moving.color,
+        vy: 0,
+        vx: axisKey === 'x' ? Math.sign(delta) * 2.5 : 0,
+        vz: axisKey === 'z' ? Math.sign(delta) * 2.5 : 0,
+        spin: (Math.random() - 0.5) * 0.04,
+      };
+      fallers.push(slice);
+
+      moving[axisKey] = centerNew;
+      moving[sizeKey] = overlapEnd - overlapStart;
+      combo = 0;
+      vibrate(8);
+      score += 1;
+      burst(moving, false);
+    }
+
+    // commit moving to stack
+    moving.born = performance.now();
+    stack.push({ x: moving.x, z: moving.z, w: moving.w, d: moving.d, y: moving.y, color: moving.color, born: moving.born });
+    shake = 4;
+    targetCamY += BLOCK_H;
+
+    // next
+    axis = axis === 'x' ? 'z' : 'x';
+    dir *= -1;
+    speed = Math.min(5.2, speed + 0.06);
+    spawnMoving();
+    updateHUD();
+  }
+
+  function gameOver() {
+    running = false;
+    last = score;
+    localStorage.setItem('stack-last', String(last));
+    if (score > best) {
+      best = score;
+      localStorage.setItem('stack-best', String(best));
+      flashCombo('NEW BEST!');
+    }
+    shake = 14;
+    vibrate([20, 60, 30, 60, 80]);
+    setTimeout(() => {
+      bestOver.textContent = best;
+      lastOver.textContent = last;
+      startBtn.textContent = 'Tap to retry';
+      overlay.classList.remove('hidden');
+    }, 700);
+  }
+
+  function updateHUD() {
+    scoreEl.textContent = score;
+    bestEl.textContent = best;
+  }
+
+  function flashCombo(text) {
+    comboEl.textContent = text;
+    comboEl.classList.remove('show');
+    // force reflow
+    void comboEl.offsetWidth;
+    comboEl.classList.add('show');
+    clearTimeout(flashCombo._t);
+    flashCombo._t = setTimeout(() => comboEl.classList.remove('show'), 700);
+  }
+
+  function vibrate(pattern) {
+    if (navigator.vibrate) {
+      try { navigator.vibrate(pattern); } catch (e) {}
+    }
+  }
+
+  function burst(block, perfect) {
+    const n = perfect ? 24 : 10;
+    const [tx, ty] = project(block.x, block.y, block.z, camY);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = 1 + Math.random() * (perfect ? 4 : 2);
+      particles.push({
+        x: tx, y: ty,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v - (perfect ? 2 : 1),
+        life: 1, size: 2 + Math.random() * 3,
+        color: perfect ? '#ffffff' : block.color[0],
+      });
+    }
+  }
+
+  // ---- Drawing ----
+  function drawBlock(b, alpha = 1) {
+    const [light, mid, dark] = b.color;
+    const x = b.x, z = b.z, y = b.y, w = b.w, d = b.d;
+    const hx = w / 2, hz = d / 2;
+
+    // 8 corners — we just need top quad and side quads
+    const topNE = project(x + hx, y, z - hz, camY);
+    const topNW = project(x - hx, y, z - hz, camY);
+    const topSW = project(x - hx, y, z + hz, camY);
+    const topSE = project(x + hx, y, z + hz, camY);
+    const botSE = project(x + hx, y - BLOCK_H, z + hz, camY);
+    const botSW = project(x - hx, y - BLOCK_H, z + hz, camY);
+    const botNE = project(x + hx, y - BLOCK_H, z - hz, camY);
+
+    ctx.globalAlpha = alpha;
+
+    // right face
+    ctx.fillStyle = dark;
+    ctx.beginPath();
+    ctx.moveTo(topSE[0], topSE[1]);
+    ctx.lineTo(topNE[0], topNE[1]);
+    ctx.lineTo(botNE[0], botNE[1]);
+    ctx.lineTo(botSE[0], botSE[1]);
+    ctx.closePath();
+    ctx.fill();
+
+    // front face
+    ctx.fillStyle = mid;
+    ctx.beginPath();
+    ctx.moveTo(topSW[0], topSW[1]);
+    ctx.lineTo(topSE[0], topSE[1]);
+    ctx.lineTo(botSE[0], botSE[1]);
+    ctx.lineTo(botSW[0], botSW[1]);
+    ctx.closePath();
+    ctx.fill();
+
+    // top
+    const grad = ctx.createLinearGradient(topNW[0], topNW[1], topSE[0], topSE[1]);
+    grad.addColorStop(0, light);
+    grad.addColorStop(1, mid);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(topNE[0], topNE[1]);
+    ctx.lineTo(topNW[0], topNW[1]);
+    ctx.lineTo(topSW[0], topSW[1]);
+    ctx.lineTo(topSE[0], topSE[1]);
+    ctx.closePath();
+    ctx.fill();
+
+    // thin glowing top edge
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+  }
+
+  function drawScene(t, dt) {
+    // background gradient (already on body, but draw subtle vignette)
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid floor lines for depth
+    ctx.save();
+    if (shake > 0) {
+      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+      shake *= 0.85;
+      if (shake < 0.2) shake = 0;
+    }
+
+    // Soft glow under tower
+    const baseTop = stack[0];
+    if (baseTop) {
+      const [bx, by] = project(0, 0, 0, camY);
+      const g = ctx.createRadialGradient(bx, by + 20, 0, bx, by + 20, 320);
+      g.addColorStop(0, 'rgba(255,61,240,0.18)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Smooth camera
+    camY += (targetCamY - camY) * Math.min(1, dt * 0.006);
+
+    // draw stack bottom-up
+    for (const b of stack) drawBlock(b, 1);
+
+    // moving block
+    if (moving) {
+      // bob speed
+      moving[moving.axis] += moving.speed * moving.dir * (dt / 16.67);
+      const limit = BASE_W * 1.15;
+      const top = stack[stack.length - 1];
+      const ref = top[moving.axis];
+      if (moving[moving.axis] > ref + limit) moving.dir = -1;
+      else if (moving[moving.axis] < ref - limit) moving.dir = 1;
+      drawBlock(moving, 1);
+    }
+
+    // fallers
+    for (let i = fallers.length - 1; i >= 0; i--) {
+      const f = fallers[i];
+      f.vy = (f.vy || 0) - 0.8;
+      f.y += f.vy;
+      f.x += f.vx || 0;
+      f.z += f.vz || 0;
+      drawBlock(f, Math.max(0, 1 - (camY - (f.y + 600)) * -0.001));
+      // remove when offscreen
+      const [, sy] = project(f.x, f.y, f.z, camY);
+      if (sy > H + 200) fallers.splice(i, 1);
+    }
+
+    // particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.18;
+      p.life -= 0.02;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+  }
+
+  // ---- Loop ----
+  let last_t = performance.now();
+  function loop(t) {
+    const dt = Math.min(50, t - last_t);
+    last_t = t;
+    drawScene(t, dt);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---- Input ----
+  function tap(e) {
+    if (e.cancelable) e.preventDefault();
+    if (!running) return;
+    drop();
+  }
+  document.addEventListener('touchstart', tap, { passive: false });
+  document.addEventListener('mousedown', (e) => {
+    // ignore taps on the overlay button (handled separately)
+    if (e.target.closest('#overlay')) return;
+    tap(e);
+  });
+
+  function startGame() {
+    overlay.classList.add('hidden');
+    reset();
+    running = true;
+  }
+  startBtn.addEventListener('click', startGame);
+  startBtn.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); }, { passive: false });
+
+  // Init HUD values
+  bestEl.textContent = best;
+  bestOver.textContent = best;
+  lastOver.textContent = last;
+
+  // Draw a faint preview so the title screen isn't empty
+  stack.push({ x: 0, z: 0, w: BASE_W, d: BASE_D, y: 0, color: colorFor(0), born: 0 });
+  for (let i = 1; i < 6; i++) {
+    stack.push({
+      x: (i % 2) * 12 - 6, z: ((i + 1) % 2) * 10 - 5,
+      w: BASE_W - i * 4, d: BASE_D - i * 4,
+      y: i * BLOCK_H, color: colorFor(i), born: 0
+    });
+  }
+  targetCamY = camY = 60;
+
+})();
+</script>
+</body>
+</html>
