@@ -255,6 +255,135 @@
   }
   #dmg-vignette.hit{box-shadow:inset 0 0 200px rgba(255,40,40,.65);}
 
+  /* Context prompt — appears near bottom centre when interact target is in range */
+  #ctx-prompt{
+    position:absolute;left:50%;bottom:32%;transform:translate(-50%,0);
+    padding:8px 14px;border-radius:99px;background:var(--hud-bg);
+    border:1px solid rgba(124,242,200,.45);backdrop-filter:blur(8px);
+    font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);
+    box-shadow:0 0 24px rgba(124,242,200,.2);display:none;
+    text-align:center;
+  }
+  #ctx-prompt.show{display:block;}
+  #ctx-prompt .key{
+    display:inline-block;padding:1px 7px;border:1px solid var(--accent);
+    border-radius:4px;font-size:9px;margin-right:6px;
+  }
+  #ctx-prompt.tame{border-color:rgba(255,210,80,.55);color:#ffe080;}
+  #ctx-prompt.tame .key{border-color:#ffe080;}
+  #ctx-prompt.mount{border-color:rgba(180,140,255,.55);color:#b8a3ff;}
+  #ctx-prompt.mount .key{border-color:#b8a3ff;}
+
+  /* Taming progress ring — drawn around target via translate */
+  #tame-ring{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:140px;height:140px;display:none;pointer-events:none;
+  }
+  #tame-ring.show{display:block;}
+  #tame-ring svg{width:100%;height:100%;}
+  #tame-ring .bg{stroke:rgba(255,255,255,.18);stroke-width:6;fill:none;}
+  #tame-ring .fg{stroke:#ffe080;stroke-width:6;fill:none;stroke-linecap:round;
+    transform:rotate(-90deg);transform-origin:50% 50%;
+    transition:stroke-dashoffset .12s linear;filter:drop-shadow(0 0 8px rgba(255,224,128,.7));}
+  #tame-ring .label{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:10px;letter-spacing:.3em;color:#ffe080;text-transform:uppercase;
+  }
+
+  /* Companion HUD pill, mount HUD */
+  #comp-bar{
+    position:absolute;bottom:calc(max(env(safe-area-inset-bottom,12px),12px) + 64px);left:12px;
+    padding:6px 12px;background:var(--hud-bg);border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(8px);border-radius:12px;display:none;min-width:140px;
+  }
+  #comp-bar.show{display:block;}
+  #comp-bar .nm{font-size:10px;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;}
+  #comp-bar .bar{margin-top:3px;height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #comp-bar .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#7cf2c8,#3aa377);}
+
+  #mount-bar{
+    position:absolute;top:calc(env(safe-area-inset-top,12px) + 100px);left:50%;transform:translateX(-50%);
+    padding:8px 18px;background:var(--hud-bg);border:1px solid rgba(180,140,255,.5);
+    backdrop-filter:blur(8px);border-radius:99px;display:none;
+    box-shadow:0 0 24px rgba(180,140,255,.25);
+  }
+  #mount-bar.show{display:block;}
+  #mount-bar .nm{font-size:11px;letter-spacing:.3em;color:#c8b8ff;text-transform:uppercase;}
+  #mount-bar .stm{margin-top:3px;height:4px;width:160px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #mount-bar .stm i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#fff0a8,#f5d36a);}
+
+  /* Modal panels (roost menu, skills) */
+  .modal{
+    position:fixed;inset:0;display:none;z-index:60;
+    background:rgba(4,8,10,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    align-items:center;justify-content:center;padding:24px;
+  }
+  .modal.show{display:flex;}
+  .modal .panel{
+    width:min(640px,100%);max-height:88vh;overflow:auto;
+    background:linear-gradient(180deg,rgba(12,28,22,.95),rgba(8,18,14,.95));
+    border:1px solid rgba(124,242,200,.4);border-radius:16px;padding:20px 22px;
+    box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 40px rgba(124,242,200,.15);
+  }
+  .modal h2{color:var(--accent);font-size:14px;letter-spacing:.42em;text-transform:uppercase;font-weight:700;}
+  .modal .sub{margin-top:4px;font-size:10px;letter-spacing:.3em;color:#9ad4be;opacity:.7;}
+  .modal .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+  .modal button{
+    padding:10px 18px;border-radius:10px;background:rgba(124,242,200,.1);
+    border:1px solid rgba(124,242,200,.5);color:var(--accent);font-size:11px;
+    letter-spacing:.25em;text-transform:uppercase;cursor:pointer;font-weight:600;
+  }
+  .modal button:active,.modal button.primary{background:rgba(124,242,200,.3);}
+  .modal button.danger{border-color:rgba(255,140,140,.55);color:#ff8a8a;background:rgba(255,140,140,.08);}
+  .modal .close{
+    position:absolute;top:14px;right:18px;border:none;background:transparent;color:#9ad4be;
+    font-size:24px;cursor:pointer;padding:0;letter-spacing:0;
+  }
+
+  /* Skill tree */
+  .skill-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:14px;}
+  .skill-col h3{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);
+    border-bottom:1px solid rgba(124,242,200,.2);padding-bottom:6px;margin-bottom:8px;}
+  .skill-col.hunter h3{color:#ff8aa0;border-color:rgba(255,138,160,.25);}
+  .skill-col.beast  h3{color:#b8a3ff;border-color:rgba(184,163,255,.25);}
+  .skill-col.surv   h3{color:#a0e890;border-color:rgba(160,232,144,.25);}
+  .skill-node{
+    margin-bottom:6px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:transform .08s;
+  }
+  .skill-node:active{transform:scale(.97);}
+  .skill-node .nm{font-size:11px;font-weight:600;letter-spacing:.1em;color:#fff;}
+  .skill-node .lv{font-size:10px;letter-spacing:.2em;color:var(--accent);float:right;}
+  .skill-node .desc{font-size:10px;letter-spacing:.05em;color:#cfe9d8;opacity:.7;margin-top:3px;}
+  .skill-node.max{opacity:.5;cursor:default;}
+  .skill-node.maxed .lv{color:#ffe080;}
+  .skill-col.hunter .skill-node .lv{color:#ff8aa0;}
+  .skill-col.beast  .skill-node .lv{color:#b8a3ff;}
+  .skill-col.surv   .skill-node .lv{color:#a0e890;}
+  .sp-pill{display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(255,224,128,.18);
+    border:1px solid rgba(255,224,128,.5);color:#ffe080;font-size:11px;letter-spacing:.2em;}
+
+  /* Roost menu list */
+  .roost-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+  .roost-list .opt{
+    padding:14px;border-radius:12px;border:1px solid rgba(124,242,200,.2);
+    background:rgba(255,255,255,.04);cursor:pointer;transition:transform .08s;
+  }
+  .roost-list .opt:active{transform:scale(.97);background:rgba(124,242,200,.1);}
+  .roost-list .opt .nm{font-size:12px;letter-spacing:.2em;color:#fff;font-weight:600;text-transform:uppercase;}
+  .roost-list .opt .desc{font-size:10px;color:#9ad4be;margin-top:4px;opacity:.7;}
+
+  /* Companions list inside roost menu */
+  .comp-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .comp-item{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  }
+  .comp-item .ico{width:24px;height:24px;border-radius:50%;background:#7cf2c8;flex:0 0 24px;}
+  .comp-item .nm{flex:1;font-size:11px;letter-spacing:.15em;color:#fff;}
+  .comp-item button{padding:5px 10px;font-size:9px;}
+  .comp-item.active{border-color:var(--accent);background:rgba(124,242,200,.1);}
+
   .hidden{display:none!important;}
 </style>
 </head>
@@ -264,7 +393,7 @@
 <!-- Boot screen -->
 <div id="boot">
   <h1>SAURIAN FRONTIER</h1>
-  <div class="sub">Stage II · Bone &amp; Blade</div>
+  <div class="sub">Stage III · Bond &amp; Saddle</div>
   <div class="bar"><div class="fill" id="boot-fill"></div></div>
   <div class="tag" id="boot-status">awakening the prehistoric...</div>
   <button id="boot-start">Enter the Wilds</button>
@@ -282,10 +411,10 @@
   <div id="biome-banner">Greenleaf Plains</div>
   <div id="minimap"><canvas id="minimap-canvas" width="240" height="240"></canvas></div>
   <div id="help">
-    <b style="color:var(--accent);letter-spacing:.2em;">Stage II</b><br/>
-    Move · WASD · Sprint · Shift<br/>
-    Light · J · Heavy · K · Dodge · F<br/>
-    Lock · L · Scan · Q (hold)
+    <b style="color:var(--accent);letter-spacing:.2em;">Stage III</b><br/>
+    WASD · Shift · Space · F dodge<br/>
+    J light · K heavy · L lock · Q scan<br/>
+    E interact · M skills · ESC close
   </div>
 
   <div id="target-bar">
@@ -317,6 +446,73 @@
   <div id="scan-overlay"></div>
   <div id="scan-reticle"></div>
   <div id="dmg-vignette"></div>
+
+  <div id="ctx-prompt"><span class="key">E</span><span class="ctx-text">INTERACT</span></div>
+  <div id="tame-ring">
+    <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44"></circle>
+    <circle class="fg" cx="50" cy="50" r="44" stroke-dasharray="276.46" stroke-dashoffset="276.46"></circle></svg>
+    <div class="label">TAMING</div>
+  </div>
+
+  <div id="comp-bar"><div class="nm">— · LV 1</div><div class="bar"><i></i></div></div>
+  <div id="mount-bar"><div class="nm">RIDING</div><div class="stm"><i></i></div></div>
+</div>
+
+<!-- Roost menu modal -->
+<div class="modal" id="modal-roost">
+  <div class="panel" style="position:relative;">
+    <button class="close" data-modal-close>×</button>
+    <h2>The Roost</h2>
+    <div class="sub">A safe place. Recover, train, summon.</div>
+    <div class="roost-list">
+      <div class="opt" data-roost="rest">
+        <div class="nm">Rest</div>
+        <div class="desc">Sleep until dawn. Full HP &amp; stamina.</div>
+      </div>
+      <div class="opt" data-roost="skills">
+        <div class="nm">Skill Tree</div>
+        <div class="desc">Spend skill points across three paths.</div>
+      </div>
+      <div class="opt" data-roost="companions">
+        <div class="nm">Companions</div>
+        <div class="desc">Choose your active battle dino.</div>
+      </div>
+      <div class="opt" data-roost="leave">
+        <div class="nm">Step Back Out</div>
+        <div class="desc">Return to the wilds.</div>
+      </div>
+    </div>
+    <div class="comp-list" id="comp-list" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Skill tree modal -->
+<div class="modal" id="modal-skills">
+  <div class="panel" style="position:relative;">
+    <button class="close" data-modal-close>×</button>
+    <h2>Skill Tree</h2>
+    <div class="sub">Three paths · spend with care</div>
+    <div style="margin-top:10px;">
+      Skill points · <span class="sp-pill" id="sp-count">0</span>
+    </div>
+    <div class="skill-cols">
+      <div class="skill-col hunter">
+        <h3>Hunter</h3>
+        <div data-skill-col="hunter"></div>
+      </div>
+      <div class="skill-col beast">
+        <h3>Beastmaster</h3>
+        <div data-skill-col="beast"></div>
+      </div>
+      <div class="skill-col surv">
+        <h3>Survivor</h3>
+        <div data-skill-col="surv"></div>
+      </div>
+    </div>
+    <div class="row-btns">
+      <button data-modal-close>Done</button>
+    </div>
+  </div>
 </div>
 
 <!-- Touch overlay -->
@@ -1326,23 +1522,24 @@ function updateCombat(dt){
 
 /* Sweep-test the melee hit volume against each dino. */
 function doMeleeHitCheck(action){
-  // Hit zone is a cone in front of the player.
   const forward = new THREE.Vector3(Math.sin(PLAYER.yaw), 0, Math.cos(PLAYER.yaw));
+  const arc = action.arc * (typeof M !== 'undefined' ? M.hitArc() : 1);
+  const dmgMul = (typeof M !== 'undefined' ? M.meleeDmg() : 1);
   for (const d of dinos){
     if (d.dying) continue;
+    if (d.tamed) continue;        // never hit our own companions
     if (PLAYER.alreadyHit.has(d)) continue;
     const dx = d.pos.x - PLAYER.pos.x;
     const dz = d.pos.z - PLAYER.pos.z;
     const dist = Math.hypot(dx, dz);
     if (dist > action.reach + d.profile.size * 0.8) continue;
     const dirN = dist > 0 ? { x: dx / dist, z: dz / dist } : { x: 0, z: 0 };
-    const dot = dirN.x * forward.x + dirN.z * forward.z; // cos(angle)
-    if (dot < Math.cos(action.arc)) continue;
+    const dot = dirN.x * forward.x + dirN.z * forward.z;
+    if (dot < Math.cos(arc)) continue;
     PLAYER.alreadyHit.add(d);
-    // Crit if heavy or hit on a weak point (we approximate weak point by hitting from a flank/rear)
-    const isFlank = dot < Math.cos(action.arc * 0.5);
+    const isFlank = dot < Math.cos(arc * 0.5);
     const isCrit = !!action.crit || isFlank;
-    const dmg = action.damage * (isCrit ? 1.6 : 1) * (1 + PLAYER.level * 0.08);
+    const dmg = action.damage * (isCrit ? 1.6 : 1) * (1 + PLAYER.level * 0.08) * dmgMul;
     d.takeDamage(dmg, isCrit, forward);
     addScreenShake(action.crit ? 0.45 : 0.18);
     spawnHitSparks(d.pos.x, d.pos.y + d.profile.size * 1.4, d.pos.z, isCrit);
@@ -1377,7 +1574,7 @@ function updateLockOn(dt){
 function pickNearestEnemy(range){
   let best = null, bestD = range * range;
   for (const d of dinos){
-    if (d.dying) continue;
+    if (d.dying || d.tamed) continue;
     const dist2 = d.pos.distanceToSquared(PLAYER.pos);
     if (dist2 < bestD){ bestD = dist2; best = d; }
   }
@@ -1385,7 +1582,7 @@ function pickNearestEnemy(range){
 }
 function cycleLockTarget(){
   if (!LOCK.active) return;
-  const list = dinos.filter(d => !d.dying && d.pos.distanceTo(PLAYER.pos) < LOCK.loseRange);
+  const list = dinos.filter(d => !d.dying && !d.tamed && d.pos.distanceTo(PLAYER.pos) < LOCK.loseRange);
   if (list.length === 0){ LOCK.active = false; return; }
   const idx = list.indexOf(LOCK.target);
   LOCK.target = list[(idx + 1) % list.length];
@@ -1437,7 +1634,7 @@ function updateScan(dt){
   const ray = new THREE.Vector3(0, 0, -1).unproject(camera).sub(camera.position).normalize();
   let best = null, bestDot = 0.8;
   for (const d of dinos){
-    if (d.dying) continue;
+    if (d.dying || d.tamed) continue;
     const toD = _vTmp.copy(d.pos).sub(camera.position);
     const distSq = toD.lengthSq();
     if (distSq > 80*80) continue;
@@ -1545,9 +1742,11 @@ const LOOT_TABLE = {
 const LOOT_COLORS = { bone: 0xeeeae0, hide: 0xc9a577, meat: 0xff8a8a };
 function spawnLoot(species, x, y, z){
   const table = LOOT_TABLE[species] || LOOT_TABLE.parasaur;
+  const bonus = (typeof M !== 'undefined') ? M.dropBonus() : 1;
   for (const k in table){
     const [lo, hi] = table[k];
-    const count = randInt(lo, hi);
+    let count = randInt(lo, hi);
+    count = Math.round(count * bonus);
     if (count <= 0) continue;
     const mesh = new THREE.Mesh(
       new THREE.OctahedronGeometry(0.4, 0),
@@ -1567,7 +1766,8 @@ function updateLoot(dt){
     // pickup proximity
     const dx = L.mesh.position.x - PLAYER.pos.x;
     const dz = L.mesh.position.z - PLAYER.pos.z;
-    if (dx*dx + dz*dz < 6){
+    const r = (typeof M !== 'undefined') ? M.pickupR() : Math.sqrt(6);
+    if (dx*dx + dz*dz < r * r){
       INVENTORY[L.item] = (INVENTORY[L.item] || 0) + L.count;
       spawnFloater(`+${L.count} ${L.item}`, 'pickup', L.mesh.position);
       scene.remove(L.mesh);
@@ -1593,9 +1793,16 @@ function gainXP(amount){
     PLAYER.xp -= PLAYER.xpNext;
     PLAYER.level++;
     PLAYER.xpNext = Math.floor(PLAYER.xpNext * 1.4);
-    PLAYER.hpMax += 10; PLAYER.spMax += 5;
+    // Recompute caps via skill multipliers (handles Stage III post-skills too).
+    if (typeof SKILLS !== 'undefined'){
+      SKILLS.points++;
+      PLAYER.hpMax = M.hpMax();
+      PLAYER.spMax = M.stamMax();
+    } else {
+      PLAYER.hpMax += 10; PLAYER.spMax += 5;
+    }
     PLAYER.hp = PLAYER.hpMax; PLAYER.sp = PLAYER.spMax;
-    showBanner(`LEVEL UP · ${PLAYER.level}`, 1800);
+    showBanner(`LEVEL UP · ${PLAYER.level} · +1 SKILL POINT`, 2200);
   }
   refreshInv();
 }
@@ -1653,19 +1860,28 @@ function updatePlayer(dt){
   pollKeyboard();
   pollGamepad();
 
-  // Consume one-shot edge actions
-  if (INPUT_EDGE.lock){
-    INPUT_EDGE.lock = false;
-    if (LOCK.active){ LOCK.active = false; LOCK.target = null; hideLockUI(); }
-    else { LOCK.target = pickNearestEnemy(LOCK.acquireRange); if (LOCK.target) LOCK.active = true; }
+  // Pause input-driven action while a modal is open
+  if (anyModalOpen()){
+    INPUT.cam.dx = 0; INPUT.cam.dy = 0;
+    INPUT_EDGE.attack = INPUT_EDGE.heavy = INPUT_EDGE.dodge = INPUT_EDGE.lock = INPUT_EDGE.cycle = false;
+    return;
   }
-  if (INPUT_EDGE.cycle){ INPUT_EDGE.cycle = false; cycleLockTarget(); }
-  if (INPUT_EDGE.dodge){ INPUT_EDGE.dodge = false; tryDodge(); }
-  if (INPUT_EDGE.attack){
-    INPUT_EDGE.attack = false;
-    tryAttack(PLAYER.comboIndex === 0 ? 'jab' : 'thrust');
+
+  // Consume one-shot edge actions (skipped when mounted — mount handles its own)
+  if (!MOUNT.active){
+    if (INPUT_EDGE.lock){
+      INPUT_EDGE.lock = false;
+      if (LOCK.active){ LOCK.active = false; LOCK.target = null; hideLockUI(); }
+      else { LOCK.target = pickNearestEnemy(LOCK.acquireRange); if (LOCK.target) LOCK.active = true; }
+    }
+    if (INPUT_EDGE.cycle){ INPUT_EDGE.cycle = false; cycleLockTarget(); }
+    if (INPUT_EDGE.dodge){ INPUT_EDGE.dodge = false; tryDodge(); }
+    if (INPUT_EDGE.attack){
+      INPUT_EDGE.attack = false;
+      tryAttack(PLAYER.comboIndex === 0 ? 'jab' : 'thrust');
+    }
+    if (INPUT_EDGE.heavy){ INPUT_EDGE.heavy = false; tryAttack('heavy'); }
   }
-  if (INPUT_EDGE.heavy){ INPUT_EDGE.heavy = false; tryAttack('heavy'); }
 
   // Camera rotation from deltas — disabled when locked-on (camera tracks target)
   const camSens = 0.0035;
@@ -1674,6 +1890,9 @@ function updatePlayer(dt){
     CAM.pitch = clamp(CAM.pitch + INPUT.cam.dy * camSens * 0.8, -0.35, 1.05);
   }
   INPUT.cam.dx = 0; INPUT.cam.dy = 0;
+
+  // When mounted, mount module drives position. Skip ground movement logic.
+  if (MOUNT.active) return;
 
   // Dodge/attack lock out normal movement (dodge already drives velocity in updateCombat)
   if (PLAYER.combatState === 'dodge') return;
@@ -1906,6 +2125,12 @@ class Dino {
     this.removed = false;
     this.hitFlash = 0;
     this.attackCD = 0;
+    // Stage III flags
+    this.tamed = false;
+    this.companion = false;
+    this.entry = null;          // roster entry once tamed
+    this.aggroIgnoresPlayer = false;
+    this.onGround = true;
     this.mesh.scale.multiplyScalar(profile.size);
     // Cache original material colors so we can flash on hit
     this._materialColors = [];
@@ -1924,11 +2149,13 @@ class Dino {
     this.hitFlash = 0.25;
     spawnFloater((isCrit ? '✦ ' : '') + Math.ceil(amount), isCrit ? 'crit' : 'dmg',
       new THREE.Vector3(this.pos.x, this.pos.y + this.profile.size * 2.4, this.pos.z));
-    // Aggro: even herbivores will flee fast; trikes charge.
-    if (this.profile.diet === 'carn' || this.species === 'trike'){
-      this.setState(DINO_STATES.CHARGE);
-    } else {
-      this.setState(DINO_STATES.FLEE);
+    if (!this.tamed){
+      // Aggro: even herbivores will flee fast; trikes charge.
+      if (this.profile.diet === 'carn' || this.species === 'trike'){
+        this.setState(DINO_STATES.CHARGE);
+      } else {
+        this.setState(DINO_STATES.FLEE);
+      }
     }
     // Knockback impulse
     if (fromForward){
@@ -1939,6 +2166,18 @@ class Dino {
   }
 
   die(){
+    if (this.tamed){
+      // Companions don't die — they retreat to the Roost and full-heal there.
+      const name = (this.entry?.name || 'Companion').split(' ')[0];
+      showBanner(`${name} fled to the Roost`, 2200);
+      if (this.entry){
+        this.entry.hp = this.entry.hpMax;
+      }
+      if (COMPANION.dino === this) COMPANION.dino = null;
+      if (MOUNT.active === this) tryDismount();
+      this.remove();
+      return;
+    }
     this.dying = true;
     this.dyingTimer = 0;
     gainXP(this.profile.xp + (this.level - 1) * 6);
@@ -1974,8 +2213,75 @@ class Dino {
     if (s === DINO_STATES.CHARGE)this.stateDuration = rand(2, 4);
   }
 
+  _animateLimbs(){
+    const sp = Math.hypot(this.vel.x, this.vel.z);
+    const t = performance.now() * 0.001;
+    const swing = Math.sin(t * (sp > 0.2 ? 6 + sp * 0.3 : 1.5)) * Math.min(1, sp * 0.12 + 0.05);
+    const pp = this.mesh.userData.parts;
+    if (pp){
+      if (pp.lFL) pp.lFL.rotation.x =  swing;
+      if (pp.lFR) pp.lFR.rotation.x = -swing;
+      if (pp.lBL) pp.lBL.rotation.x = -swing;
+      if (pp.lBR) pp.lBR.rotation.x =  swing;
+      if (pp.tail) pp.tail.rotation.z = Math.sin(t * 2) * 0.15;
+      if (pp.head) pp.head.rotation.y = Math.sin(t * 0.8 + this.pos.x) * 0.15;
+    }
+  }
+
+  _updateAsCompanion(dt, playerPos){
+    // Tamed-companion behavior. Engage LOCK.target if hostile, else follow player.
+    const target = (LOCK.target && !LOCK.target.tamed && !LOCK.target.dying) ? LOCK.target : null;
+    if (target){
+      const dx = target.pos.x - this.pos.x;
+      const dz = target.pos.z - this.pos.z;
+      const d = Math.hypot(dx, dz) || 1;
+      this.yaw = Math.atan2(dx, dz);
+      if (d > 2.5){
+        const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+        this.vel.x = fwd.x * this.profile.sprintSpeed;
+        this.vel.z = fwd.z * this.profile.sprintSpeed;
+      } else {
+        this.vel.x = 0; this.vel.z = 0;
+        this.attackCD -= dt;
+        if (this.attackCD <= 0){
+          target.takeDamage(this.profile.damage * M.compDmg() * 1.5, false, { x: dx/d, z: dz/d });
+          spawnHitSparks(target.pos.x, target.pos.y + 1.4, target.pos.z, false);
+          this.attackCD = 1.2;
+        }
+      }
+    } else {
+      const dx = playerPos.x - this.pos.x;
+      const dz = playerPos.z - this.pos.z;
+      const d = Math.hypot(dx, dz) || 1;
+      if (d > 5){
+        this.yaw = Math.atan2(dx, dz);
+        const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+        const speed = d > 12 ? this.profile.sprintSpeed : this.profile.speed * 0.8;
+        this.vel.x = fwd.x * speed;
+        this.vel.z = fwd.z * speed;
+      } else {
+        this.vel.x *= 0.85;
+        this.vel.z *= 0.85;
+      }
+    }
+    this.pos.addScaledVector(this.vel, dt);
+    const limit = WORLD.size - 6;
+    this.pos.x = clamp(this.pos.x, -limit, limit);
+    this.pos.z = clamp(this.pos.z, -limit, limit);
+    this.pos.y = heightAt(this.pos.x, this.pos.z);
+    this.mesh.position.copy(this.pos);
+    this.mesh.rotation.y = this.yaw;
+    if (this.entry){ this.entry.hp = this.hp; }
+    this._animateLimbs();
+  }
+
   update(dt, playerPos){
     if (this.removed) return;
+    // Skip when ridden — MOUNT module drives transform externally.
+    if (MOUNT.active === this){ this._animateLimbs(); return; }
+    // Tamed companion override
+    if (this.tamed && this.companion){ this._updateAsCompanion(dt, playerPos); return; }
+
     // Dying — sink + fade then despawn
     if (this.dying){
       this.dyingTimer += dt;
@@ -2093,6 +2399,8 @@ class Dino {
       this.yaw += dy * Math.min(1, dt * 6);
     }
 
+    // Weakened dinos move slower so they're catchable for taming.
+    if (this.hp / this.hpMax < 0.30) speed *= 0.55;
     // Move
     const forward = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     this.vel.x = forward.x * speed;
@@ -2154,6 +2462,516 @@ function spawnDinos(){
 spawnDinos();
 initSparks();
 refreshInv();
+
+/* ---------- 10b. Stage III: Skills, Taming, Mount, Companion, Roost --- */
+
+/* Skill definitions — 3 branches × 4 nodes. */
+const SKILL_DEFS = {
+  hunter: [
+    { id:'dmg',   nm:'Razor Edge',     dx:'+10% melee damage per rank',  max:5 },
+    { id:'combo', nm:'Quickdraw',      dx:'-10% attack windup per rank', max:3 },
+    { id:'arc',   nm:'Wide Swing',     dx:'+15% hit arc per rank',       max:3 },
+    { id:'stam',  nm:'Endurance',      dx:'+10 max stamina per rank',    max:5 },
+  ],
+  beast: [
+    { id:'tame', nm:'Soft Whisper',    dx:'-15% taming time per rank',   max:5 },
+    { id:'comp', nm:'Pack Bond',       dx:'+15% companion damage per rank', max:5 },
+    { id:'mount',nm:'Saddle Up',       dx:'+10% mount speed per rank',   max:5 },
+    { id:'calm', nm:'Gentle Approach', dx:'+6% tame-ready HP per rank',  max:3 },
+  ],
+  surv: [
+    { id:'hp',     nm:'Hide Like Bark', dx:'+10 max vitality per rank',  max:5 },
+    { id:'pickup', nm:'Quick Hands',    dx:'+30% pickup range per rank', max:3 },
+    { id:'drop',   nm:'Sharp Eye',      dx:'+15% extra loot per rank',   max:5 },
+    { id:'fall',   nm:'Sure Footed',    dx:'-30% fall damage per rank',  max:3 },
+  ],
+};
+
+const SKILLS = {
+  points: 0,
+  hunter: { dmg:0, combo:0, arc:0, stam:0 },
+  beast:  { tame:0, comp:0, mount:0, calm:0 },
+  surv:   { hp:0, pickup:0, drop:0, fall:0 },
+};
+
+/* Derived multipliers — single source of truth used by combat/loot/ui. */
+const M = {
+  meleeDmg:     () => 1 + SKILLS.hunter.dmg * 0.10,
+  attackSpeed:  () => 1 - SKILLS.hunter.combo * 0.10,
+  hitArc:       () => 1 + SKILLS.hunter.arc * 0.15,
+  stamMax:      () => 100 + SKILLS.hunter.stam * 10,
+  hpMax:        () => 100 + SKILLS.surv.hp * 10,
+  tameTime:     () => 1 - SKILLS.beast.tame * 0.15,
+  compDmg:      () => 1 + SKILLS.beast.comp * 0.15,
+  mountSpd:     () => 1 + SKILLS.beast.mount * 0.10,
+  tameHpThresh: () => 0.30 + SKILLS.beast.calm * 0.06,
+  pickupR:      () => Math.sqrt(6) * (1 + SKILLS.surv.pickup * 0.30),
+  dropBonus:    () => 1 + SKILLS.surv.drop * 0.15,
+  fallMul:      () => 1 - SKILLS.surv.fall * 0.30,
+};
+
+function allocSkill(branch, id){
+  if (SKILLS.points <= 0) return;
+  const def = SKILL_DEFS[branch].find(d => d.id === id);
+  if (!def) return;
+  if (SKILLS[branch][id] >= def.max) return;
+  SKILLS[branch][id]++;
+  SKILLS.points--;
+  // Reflect changed caps onto player
+  PLAYER.spMax = M.stamMax();
+  PLAYER.hpMax = M.hpMax();
+  PLAYER.sp = Math.min(PLAYER.sp, PLAYER.spMax);
+  PLAYER.hp = Math.min(PLAYER.hp, PLAYER.hpMax);
+  refreshSkillUI();
+  saveGame();
+}
+
+/* === ROOST ============================================================ */
+const ROOST = {
+  pos: new THREE.Vector3(0, 0, 12),
+  range: 7,
+  mesh: null,
+  tamedDinos: [], // serialised entries
+};
+
+function makeRoostMesh(){
+  const g = new THREE.Group();
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 0.6, 12), toonMat(0x6e4a30, {flatShading:true}));
+  plat.position.y = 0.3; plat.castShadow = true; plat.receiveShadow = true; g.add(plat);
+  // Rim accent
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(4, 0.16, 6, 18), toonMat(0x7cf2c8, {flatShading:true}));
+  rim.position.y = 0.62; rim.rotation.x = Math.PI / 2; g.add(rim);
+  // Totem
+  const totem = new THREE.Mesh(new THREE.BoxGeometry(0.9, 4.4, 0.9), toonMat(0x3a2820, {flatShading:true}));
+  totem.position.y = 2.8; totem.castShadow = true; g.add(totem);
+  // Carved face
+  const eye  = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), toonMat(0xffae50, {flatShading:true}));
+  eye.position.set( 0.25, 3.6, 0.46); g.add(eye);
+  const eye2 = eye.clone(); eye2.position.x = -0.25; g.add(eye2);
+  const mouth= new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.10, 0.05), toonMat(0xffae50, {flatShading:true}));
+  mouth.position.set(0, 3.0, 0.47); g.add(mouth);
+  // Crown
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(0.8, 0.8, 4), toonMat(0xb3c0c8, {flatShading:true}));
+  crown.position.set(0, 5.3, 0); crown.castShadow = true; g.add(crown);
+  // Torch ring
+  const torchGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.4, 6);
+  const torchMat = toonMat(0x4a3020, {flatShading:true});
+  const fires = [];
+  for (let i = 0; i < 4; i++){
+    const a = (i / 4) * TAU + Math.PI / 4;
+    const t = new THREE.Mesh(torchGeo, torchMat);
+    t.position.set(Math.cos(a) * 3.2, 1.3, Math.sin(a) * 3.2); g.add(t);
+    const fire = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.32, 0),
+      new THREE.MeshBasicMaterial({ color:0xffae50, transparent:true, opacity:0.9, depthWrite:false })
+    );
+    fire.position.set(Math.cos(a) * 3.2, 2.2, Math.sin(a) * 3.2); g.add(fire);
+    fires.push(fire);
+  }
+  g.userData.fires = fires;
+  return g;
+}
+
+function spawnRoost(){
+  ROOST.mesh = makeRoostMesh();
+  ROOST.pos.y = heightAt(ROOST.pos.x, ROOST.pos.z);
+  ROOST.mesh.position.copy(ROOST.pos);
+  scene.add(ROOST.mesh);
+}
+function updateRoost(dt){
+  if (!ROOST.mesh) return;
+  const t = performance.now() * 0.002;
+  const fires = ROOST.mesh.userData.fires;
+  if (fires){
+    for (let i = 0; i < fires.length; i++){
+      fires[i].scale.y = 0.8 + Math.sin(t * 3 + i * 1.3) * 0.25;
+      fires[i].scale.x = fires[i].scale.z = 0.9 + Math.sin(t * 4 + i) * 0.1;
+      fires[i].rotation.y = t * 2;
+    }
+  }
+}
+
+/* === COMPANION ======================================================== */
+const COMPANION = { dino: null };
+
+function summonCompanion(entry){
+  // Remove existing
+  if (COMPANION.dino && !COMPANION.dino.removed){
+    COMPANION.dino.remove();
+    const i = dinos.indexOf(COMPANION.dino); if (i >= 0) dinos.splice(i, 1);
+    COMPANION.dino = null;
+  }
+  const dino = new Dino(entry.species, PLAYER.pos.x + 4, PLAYER.pos.z + 4, 1.0);
+  dino.tamed = true;
+  dino.companion = true;
+  dino.aggroIgnoresPlayer = true;
+  dino.entry = entry;
+  dino.hpMax = entry.hpMax;
+  dino.hp = entry.hp;
+  dino.level = entry.level || 1;
+  dinos.push(dino);
+  COMPANION.dino = dino;
+}
+
+/* === TAMING =========================================================== */
+const TAMING = {
+  target: null,
+  progress: 0,  // 0..1
+  range: 4,
+};
+
+function updateTaming(dt){
+  let target = null;
+  if (!MOUNT.active && PLAYER.combatState === 'idle'){
+    for (const d of dinos){
+      if (d.tamed || d.dying) continue;
+      if ((d.hp / d.hpMax) > M.tameHpThresh()) continue;
+      const dist = d.pos.distanceTo(PLAYER.pos);
+      if (dist <= TAMING.range && (!target || dist < target.pos.distanceTo(PLAYER.pos))){
+        target = d;
+      }
+    }
+  }
+  if (target !== TAMING.target){
+    TAMING.target = target;
+    TAMING.progress = 0;
+  }
+  if (target){
+    if (INPUT.action){
+      TAMING.progress += dt / (4.0 * M.tameTime());
+      if (TAMING.progress >= 1){
+        completeTame(target);
+        TAMING.progress = 0; TAMING.target = null;
+      }
+    } else {
+      TAMING.progress = Math.max(0, TAMING.progress - dt * 0.5);
+    }
+    positionTameRing(target);
+    $tameRing.classList.add('show');
+    const dash = 276.46;
+    $tameRing.querySelector('.fg').style.strokeDashoffset = (dash * (1 - TAMING.progress)) + '';
+  } else {
+    $tameRing.classList.remove('show');
+  }
+}
+
+const DINO_FIRST = ['Bramble','Ember','Frost','Thistle','Onyx','Sable','Shrike','Quill','Rune','Mossback','Pebble','Driftwood','Cinder','Echo'];
+function dinoName(species){
+  return pick(DINO_FIRST) + ' the ' + (DINODEX[species]?.name || species);
+}
+
+function completeTame(d){
+  d.tamed = true;
+  d.aggroIgnoresPlayer = true;
+  const entry = {
+    species: d.species,
+    name: dinoName(d.species),
+    level: d.level,
+    hp: d.hpMax,
+    hpMax: d.hpMax,
+  };
+  ROOST.tamedDinos.push(entry);
+  spawnFloater(`Tamed · ${entry.name.split(' ')[0]}`, 'pickup',
+    new THREE.Vector3(d.pos.x, d.pos.y + d.profile.size * 2.4, d.pos.z));
+  showBanner(`Tamed ${DINODEX[d.species]?.name || d.species}`, 2200);
+  // Remove the wild dino (it's now stabled at Roost)
+  d.remove();
+  // Set as active if no current companion
+  if (!COMPANION.dino || COMPANION.dino.removed) summonCompanion(entry);
+  saveGame();
+}
+
+function positionTameRing(d){
+  _vTmp.copy(d.pos); _vTmp.y += d.profile.size * 1.8;
+  _vTmp.project(camera);
+  if (_vTmp.z >= 1){ $tameRing.classList.remove('show'); return; }
+  const x = (_vTmp.x * 0.5 + 0.5) * innerWidth;
+  const y = (-_vTmp.y * 0.5 + 0.5) * innerHeight;
+  $tameRing.style.left = x + 'px';
+  $tameRing.style.top  = y + 'px';
+}
+
+/* === MOUNT ============================================================ */
+const MOUNT = {
+  active: null,
+  stamina: 100, staminaMax: 100,
+};
+
+function tryMount(d){
+  if (!d || !d.tamed || MOUNT.active) return false;
+  MOUNT.active = d;
+  MOUNT.stamina = MOUNT.staminaMax = 100 + d.hpMax * 0.5;
+  // Attach player mesh to dino back so transforms follow
+  d.mesh.add(playerMesh);
+  playerMesh.position.set(0, d.profile.size * 1.6 + 0.5, 0.2);
+  playerMesh.rotation.set(0, 0, 0);
+  const parts = playerMesh.userData.parts;
+  parts.weapon.visible = false;
+  parts.sheath.visible = true;
+  if (LOCK.active){ LOCK.active = false; LOCK.target = null; hideLockUI(); }
+  showBanner(`Mounted · ${DINODEX[d.species]?.name || d.species}`, 1600);
+  return true;
+}
+function tryDismount(){
+  const d = MOUNT.active;
+  if (!d) return;
+  scene.attach(playerMesh); // detach but preserve world transform
+  PLAYER.pos.set(d.pos.x + 2.5, d.pos.y + 1, d.pos.z);
+  PLAYER.yaw = d.yaw;
+  PLAYER.vel.set(0, 0, 0);
+  playerMesh.position.copy(PLAYER.pos);
+  playerMesh.rotation.set(0, PLAYER.yaw, 0);
+  MOUNT.active = null;
+  $mountBar.classList.remove('show');
+}
+
+function updateMount(dt){
+  const d = MOUNT.active;
+  if (!d){ $mountBar.classList.remove('show'); return; }
+  if (d.dying || d.removed){ tryDismount(); return; }
+
+  // Drive yaw from move-relative-to-camera
+  const mx = INPUT.move.x, my = INPUT.move.y;
+  const camForward = new THREE.Vector3(-Math.sin(CAM.yaw), 0, -Math.cos(CAM.yaw)).normalize();
+  const camRight   = new THREE.Vector3(-camForward.z, 0, camForward.x).normalize();
+  const moveDir = new THREE.Vector3();
+  moveDir.addScaledVector(camForward, -my);
+  moveDir.addScaledVector(camRight, mx);
+  const mlen = moveDir.length();
+  if (mlen > 0.05){
+    moveDir.divideScalar(mlen);
+    const ty = Math.atan2(moveDir.x, moveDir.z);
+    let dy = ty - d.yaw;
+    while (dy >  Math.PI) dy -= TAU;
+    while (dy < -Math.PI) dy += TAU;
+    d.yaw += dy * Math.min(1, dt * 6);
+  }
+  // Speed: sprint while button held & stamina available
+  const sprintNow = INPUT.sprint && MOUNT.stamina > 5 && mlen > 0.2;
+  const base   = d.profile.speed;
+  const sprint = d.profile.sprintSpeed;
+  const speed = (sprintNow ? sprint : base) * M.mountSpd();
+  if (sprintNow) MOUNT.stamina = Math.max(0, MOUNT.stamina - dt * 14);
+  else MOUNT.stamina = Math.min(MOUNT.staminaMax, MOUNT.stamina + dt * 8);
+  const fwd = new THREE.Vector3(Math.sin(d.yaw), 0, Math.cos(d.yaw));
+  d.vel.x = fwd.x * speed * Math.min(1, mlen);
+  d.vel.z = fwd.z * speed * Math.min(1, mlen);
+
+  // Special: trike ram on HEAVY
+  if (INPUT_EDGE.heavy){
+    INPUT_EDGE.heavy = false;
+    if (d.species === 'trike'){
+      for (const other of dinos){
+        if (other === d || other.tamed || other.dying) continue;
+        const ox = other.pos.x - d.pos.x;
+        const oz = other.pos.z - d.pos.z;
+        const od = Math.hypot(ox, oz) || 1;
+        if (od > 6) continue;
+        const dot = (ox/od) * fwd.x + (oz/od) * fwd.z;
+        if (dot < 0.55) continue;
+        other.takeDamage(85 * M.meleeDmg(), true, fwd);
+        spawnHitSparks(other.pos.x, other.pos.y + 1.5, other.pos.z, true);
+      }
+      addScreenShake(0.55);
+    }
+  }
+  // Jump
+  if (INPUT.jumpPressed && d.onGround){
+    d.vel.y = 12;
+    INPUT.jumpPressed = false;
+    d.onGround = false;
+  }
+  d.vel.y = (d.vel.y || 0) - 32 * dt;
+  d.pos.addScaledVector(d.vel, dt);
+  const limit = WORLD.size - 6;
+  d.pos.x = clamp(d.pos.x, -limit, limit);
+  d.pos.z = clamp(d.pos.z, -limit, limit);
+  const ground = heightAt(d.pos.x, d.pos.z);
+  if (d.pos.y < ground){ d.pos.y = ground; d.vel.y = 0; d.onGround = true; }
+  else d.onGround = false;
+  d.mesh.position.copy(d.pos);
+  d.mesh.rotation.y = d.yaw;
+  d._animateLimbs();
+
+  // Camera follows the dino — keep player coords in sync for camera target
+  PLAYER.pos.copy(d.pos);
+
+  // HUD
+  $mountBar.classList.add('show');
+  $mountBar.querySelector('.nm').textContent = (d.entry?.name || DINODEX[d.species]?.name || d.species).toUpperCase();
+  $mountBar.querySelector('.stm i').style.width = (MOUNT.stamina / MOUNT.staminaMax * 100) + '%';
+
+  // Dismount with dodge button
+  if (INPUT_EDGE.dodge){ INPUT_EDGE.dodge = false; tryDismount(); }
+}
+
+/* === Companion HUD ==================================================== */
+function updateCompanionUI(){
+  const c = COMPANION.dino;
+  if (!c || c.removed){ $compBar.classList.remove('show'); return; }
+  $compBar.classList.add('show');
+  $compBar.querySelector('.nm').textContent = (c.entry?.name || 'Companion').toUpperCase().split(' ')[0] + ` · LV ${c.level}`;
+  $compBar.querySelector('.bar i').style.width = (c.hp / c.hpMax * 100) + '%';
+}
+
+/* === Context prompt and ACT edge handling ============================ */
+let lastActionHeld = false;
+function handleActionEdge(){
+  const held = !!INPUT.action;
+  // Detect tap edge (transition from not-held to held)
+  if (held && !lastActionHeld){
+    if (!MOUNT.active){
+      // Priority: mount > roost > (tame is hold, not tap)
+      let mountable = null;
+      for (const d of dinos){
+        if (!d.tamed || !d.companion || d.dying) continue;
+        if (d.pos.distanceTo(PLAYER.pos) < 4){ mountable = d; break; }
+      }
+      if (mountable){ tryMount(mountable); }
+      else if (PLAYER.pos.distanceTo(ROOST.pos) < ROOST.range){ openRoostMenu(); }
+    }
+  }
+  lastActionHeld = held;
+}
+
+function updateContextPrompt(){
+  if (anyModalOpen()){ $ctxPrompt.classList.remove('show'); return; }
+  let mode = null, label = null, key = isTouch ? 'ACT' : 'E';
+  if (MOUNT.active){
+    mode = 'mount';
+    label = 'Dismount';
+    key = isTouch ? '◇' : 'F';
+  } else {
+    let mountable = null, tameable = null;
+    for (const d of dinos){
+      if (d.dying) continue;
+      const dist = d.pos.distanceTo(PLAYER.pos);
+      if (d.tamed && d.companion && dist < 4){
+        if (!mountable || dist < mountable.pos.distanceTo(PLAYER.pos)) mountable = d;
+      }
+      if (!d.tamed && (d.hp / d.hpMax) <= M.tameHpThresh() && dist < TAMING.range){
+        if (!tameable || dist < tameable.pos.distanceTo(PLAYER.pos)) tameable = d;
+      }
+    }
+    if (mountable){ mode = 'mount'; label = 'Mount'; }
+    else if (tameable){ mode = 'tame'; label = 'Hold to Tame'; }
+    else if (PLAYER.pos.distanceTo(ROOST.pos) < ROOST.range){ mode = 'roost'; label = 'Open Roost'; }
+  }
+  if (label){
+    $ctxPrompt.classList.add('show');
+    $ctxPrompt.className = 'show ' + (mode || '');
+    $ctxPrompt.innerHTML = `<span class="key">${key}</span><span>${label}</span>`;
+  } else {
+    $ctxPrompt.classList.remove('show');
+  }
+}
+
+/* === Modals =========================================================== */
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModals(){
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('show'));
+  const cl = document.getElementById('comp-list'); if (cl) cl.style.display = 'none';
+}
+function anyModalOpen(){
+  return !!document.querySelector('.modal.show');
+}
+document.querySelectorAll('[data-modal-close]').forEach(el => el.addEventListener('click', closeModals));
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModals(); });
+});
+
+function openRoostMenu(){ openModal('modal-roost'); }
+document.querySelectorAll('[data-roost]').forEach(el => {
+  el.addEventListener('click', () => {
+    const act = el.dataset.roost;
+    if (act === 'rest'){
+      PLAYER.hp = PLAYER.hpMax; PLAYER.sp = PLAYER.spMax;
+      TIME.t = 0.05; TIME.day += 1;
+      if (COMPANION.dino && !COMPANION.dino.removed){
+        COMPANION.dino.hp = COMPANION.dino.hpMax;
+        if (COMPANION.dino.entry) COMPANION.dino.entry.hp = COMPANION.dino.hpMax;
+      }
+      closeModals();
+      showBanner('You rested · dawn breaks', 2200);
+    } else if (act === 'skills'){
+      closeModals();
+      refreshSkillUI();
+      openModal('modal-skills');
+    } else if (act === 'companions'){
+      const list = document.getElementById('comp-list');
+      list.style.display = 'flex';
+      list.innerHTML = '';
+      if (ROOST.tamedDinos.length === 0){
+        list.innerHTML = '<div style="font-size:11px;letter-spacing:.2em;opacity:.6;text-align:center;padding:20px;">No tamed beasts yet. Weaken &amp; tame a wild dino.</div>';
+        return;
+      }
+      ROOST.tamedDinos.forEach((entry, idx) => {
+        const c = (DINODEX[entry.species]?.color || 0x7cf2c8).toString(16).padStart(6, '0');
+        const isActive = COMPANION.dino?.entry === entry;
+        const item = document.createElement('div');
+        item.className = 'comp-item' + (isActive ? ' active' : '');
+        item.innerHTML = `<div class="ico" style="background:#${c};"></div>
+          <div class="nm">${entry.name} · LV ${entry.level}</div>
+          <button data-pick="${idx}">${isActive ? 'ACTIVE' : 'SUMMON'}</button>`;
+        list.appendChild(item);
+      });
+      list.querySelectorAll('[data-pick]').forEach(b => {
+        b.addEventListener('click', () => {
+          const idx = parseInt(b.dataset.pick);
+          const entry = ROOST.tamedDinos[idx];
+          summonCompanion(entry);
+          closeModals();
+          showBanner(`Summoned · ${entry.name.split(' ')[0]}`, 1800);
+          saveGame();
+        });
+      });
+    } else if (act === 'leave'){
+      closeModals();
+    }
+  });
+});
+
+/* Populate skill panel — call when opened or after spending a point. */
+function refreshSkillUI(){
+  const sp = document.getElementById('sp-count');
+  if (sp) sp.textContent = SKILLS.points;
+  for (const branch of ['hunter','beast','surv']){
+    const col = document.querySelector(`[data-skill-col="${branch}"]`);
+    if (!col) continue;
+    col.innerHTML = '';
+    for (const def of SKILL_DEFS[branch]){
+      const rank = SKILLS[branch][def.id];
+      const node = document.createElement('div');
+      node.className = 'skill-node' + (rank >= def.max ? ' maxed' : '');
+      node.innerHTML = `<span class="lv">${rank}/${def.max}</span><div class="nm">${def.nm}</div><div class="desc">${def.dx}</div>`;
+      if (rank < def.max && SKILLS.points > 0){
+        node.addEventListener('click', () => allocSkill(branch, def.id));
+      } else {
+        node.style.opacity = rank >= def.max ? '.65' : '.55';
+        node.style.cursor = rank >= def.max ? 'default' : 'not-allowed';
+      }
+      col.appendChild(node);
+    }
+  }
+}
+
+/* M / Tab(when no lock) opens skills */
+addEventListener('keydown', e => {
+  if (e.code === 'KeyM'){ refreshSkillUI(); openModal('modal-skills'); }
+  if (e.code === 'Escape') closeModals();
+});
+
+/* Save wrapper exposed so completeTame / allocSkill can call it. */
+function saveGame(){ try { save(); } catch(_){} }
+
+/* Cached DOM refs */
+const $tameRing  = document.getElementById('tame-ring');
+const $compBar   = document.getElementById('comp-bar');
+const $mountBar  = document.getElementById('mount-bar');
+const $ctxPrompt = document.getElementById('ctx-prompt');
+
+spawnRoost();
+refreshSkillUI();
 
 /* ---------- 11. Day/night cycle --------------------------------------- */
 
@@ -2286,9 +3104,11 @@ function drawMinimap(){
 
 /* ---------- 13. Save / load (minimal Stage 1) ------------------------- */
 
-const SAVE_KEY = 'saurian.stage2.v1';
+const SAVE_KEY = 'saurian.stage3.v1';
 function save(){
   try {
+    const activeIdx = (typeof ROOST !== 'undefined' && COMPANION.dino?.entry)
+      ? ROOST.tamedDinos.indexOf(COMPANION.dino.entry) : -1;
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       pos: PLAYER.pos.toArray(),
       yaw: PLAYER.yaw,
@@ -2297,6 +3117,9 @@ function save(){
       level: PLAYER.level, xp: PLAYER.xp, xpNext: PLAYER.xpNext,
       inv: { bone: INVENTORY.bone, hide: INVENTORY.hide, meat: INVENTORY.meat },
       time: TIME.t, day: TIME.day,
+      skills: (typeof SKILLS !== 'undefined') ? SKILLS : null,
+      tamed:  (typeof ROOST !== 'undefined') ? ROOST.tamedDinos : [],
+      activeIdx,
     }));
   } catch(_){}
 }
@@ -2317,6 +3140,24 @@ function load(){
     if (s.inv){ INVENTORY.bone = s.inv.bone|0; INVENTORY.hide = s.inv.hide|0; INVENTORY.meat = s.inv.meat|0; }
     if (typeof s.time === 'number') TIME.t = s.time;
     if (typeof s.day === 'number')  TIME.day = s.day;
+    if (s.skills && typeof SKILLS !== 'undefined'){
+      SKILLS.points = s.skills.points | 0;
+      for (const branch of ['hunter','beast','surv']){
+        if (s.skills[branch]) Object.assign(SKILLS[branch], s.skills[branch]);
+      }
+      // Re-apply caps from skills
+      PLAYER.hpMax = M.hpMax();
+      PLAYER.spMax = M.stamMax();
+      PLAYER.hp = Math.min(PLAYER.hp, PLAYER.hpMax);
+      PLAYER.sp = Math.min(PLAYER.sp, PLAYER.spMax);
+    }
+    if (Array.isArray(s.tamed) && typeof ROOST !== 'undefined'){
+      ROOST.tamedDinos = s.tamed;
+      if (typeof s.activeIdx === 'number' && s.activeIdx >= 0 && s.activeIdx < s.tamed.length){
+        // Defer summoning to the next tick so scene + dinos array is ready
+        setTimeout(() => summonCompanion(s.tamed[s.activeIdx]), 0);
+      }
+    }
   } catch(_){}
 }
 load();
@@ -2334,21 +3175,27 @@ function loop(now){
   last = now;
 
   if (started){
-    // Time scale slows during scan mode for a tactical-feel pause.
-    const timeScale = lerp(1, 0.25, SCAN.fadeIn);
+    // Pause world time fully while a modal is open
+    const paused = anyModalOpen();
+    const timeScale = paused ? 0 : lerp(1, 0.25, SCAN.fadeIn);
     const dt = dtRaw * timeScale;
 
+    handleActionEdge();
     updatePlayer(dt);
+    updateMount(dt);
     updateCombat(dt);
+    updateTaming(dtRaw);
     updateLockOn(dt);
     updateScan(dtRaw); // scan reads real input, not slowed
     for (const d of dinos) d.update(dt, PLAYER.pos);
-    // Remove dinos marked removed (despawned after death animation)
     for (let i = dinos.length - 1; i >= 0; i--){
       if (dinos[i].removed) dinos.splice(i, 1);
     }
     updateLoot(dt);
     updateSparks(dt);
+    updateRoost(dt);
+    updateCompanionUI();
+    updateContextPrompt();
     updateTime(dt);
     updateCamera(dtRaw);
 
@@ -2415,7 +3262,7 @@ bootStart.addEventListener('click', () => {
   boot.style.pointerEvents = 'none';
   setTimeout(() => boot.classList.add('hidden'), 800);
   last = performance.now();
-  setTimeout(() => showBanner('hunt · scan · survive', 2400), 900);
+  setTimeout(() => showBanner('weaken · tame · ride', 2400), 900);
 });
 
 })();
