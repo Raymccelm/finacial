@@ -104,23 +104,36 @@
   }
   #buttons{
     position:absolute;right:12px;bottom:max(env(safe-area-inset-bottom,16px),16px);
-    display:grid;grid-template-columns:repeat(2,72px);grid-template-rows:repeat(2,72px);
-    gap:10px;pointer-events:auto;
+    display:grid;grid-template-columns:60px 70px 70px;
+    grid-template-rows:46px 70px 70px;
+    gap:8px;pointer-events:auto;
   }
   .btn{
-    width:72px;height:72px;border-radius:50%;
+    border-radius:50%;
     background:var(--hud-bg);border:1.5px solid rgba(255,255,255,.18);
     backdrop-filter:blur(8px);
     display:flex;align-items:center;justify-content:center;
     font-size:10px;letter-spacing:.2em;color:var(--hud-fg);
-    text-transform:uppercase;font-weight:600;
+    text-transform:uppercase;font-weight:600;text-align:center;
   }
   .btn:active,.btn.held{background:rgba(124,242,200,.25);border-color:var(--accent);transform:scale(.94);}
-  .btn .glyph{font-size:24px;line-height:1;margin-bottom:2px;}
-  .btn-jump{grid-column:2;grid-row:1;}
-  .btn-sprint{grid-column:1;grid-row:1;}
-  .btn-action{grid-column:2;grid-row:2;}
-  .btn-scan{grid-column:1;grid-row:2;}
+  .btn .glyph{font-size:22px;line-height:1;margin-bottom:1px;display:block;}
+  .btn-sm{
+    border-radius:99px;font-size:9px;
+    padding:0 4px;
+  }
+  .btn-sm.held,.btn-sm:active{background:rgba(124,242,200,.25);}
+  .btn-lock{grid-column:1;grid-row:1;}
+  .btn-scan{grid-column:2;grid-row:1;}
+  .btn-cycle{grid-column:3;grid-row:1;}
+  .btn-sprint{grid-column:1;grid-row:2;}
+  .btn-jump{grid-column:2;grid-row:2;}
+  .btn-dodge{grid-column:3;grid-row:2;}
+  .btn-action{grid-column:2;grid-row:3;}
+  .btn-attack{grid-column:3;grid-row:3;background:rgba(255,140,140,.18);border-color:rgba(255,140,140,.4);}
+  .btn-attack.held,.btn-attack:active{background:rgba(255,140,140,.45);}
+  .btn-heavy{grid-column:1;grid-row:3;background:rgba(255,200,80,.18);border-color:rgba(255,200,80,.4);}
+  .btn-heavy.held,.btn-heavy:active{background:rgba(255,200,80,.45);}
 
   /* Hide touch on desktop */
   body.no-touch #touch{display:none;}
@@ -131,6 +144,246 @@
     border-radius:10px;font-size:10px;letter-spacing:.1em;opacity:.55;max-width:240px;line-height:1.6;
   }
 
+  /* Target nameplate floating in world (positioned each frame from JS) */
+  #target-bar{
+    position:absolute;left:50%;top:60px;transform:translate(-50%,0);
+    min-width:160px;max-width:260px;padding:6px 12px;border-radius:10px;
+    background:var(--hud-bg);border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(6px);display:none;text-align:center;
+  }
+  #target-bar.show{display:block;}
+  #target-bar .name{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);}
+  #target-bar .bar{margin-top:4px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #target-bar .bar i{display:block;height:100%;background:linear-gradient(90deg,#ff8aa0,#ff5a6e);box-shadow:0 0 8px #ff5a6e;width:100%;transition:width .15s ease;}
+  #target-bar .sub{margin-top:3px;font-size:9px;letter-spacing:.2em;opacity:.6;}
+
+  /* Scan mode overlay */
+  #scan-overlay{
+    position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at center,rgba(80,200,255,0) 30%,rgba(20,80,180,.35) 100%);
+    box-shadow:inset 0 0 80px rgba(80,200,255,.25);
+    opacity:0;transition:opacity .3s ease;mix-blend-mode:screen;
+  }
+  #scan-overlay.on{opacity:1;}
+  #scan-reticle{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:90px;height:90px;border:2px solid rgba(124,242,200,.7);border-radius:50%;
+    display:none;pointer-events:none;
+  }
+  #scan-reticle::before,#scan-reticle::after{
+    content:'';position:absolute;background:rgba(124,242,200,.85);
+  }
+  #scan-reticle::before{left:50%;top:-12px;width:2px;height:12px;}
+  #scan-reticle::after{left:-12px;top:50%;width:12px;height:2px;}
+  #scan-overlay.on + #scan-reticle{display:block;}
+
+  /* Scan info card — populated by JS */
+  #info-card{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,calc(-50% - 160px));
+    width:min(320px,86%);padding:14px 18px;
+    background:linear-gradient(180deg,rgba(8,28,40,.85),rgba(8,18,14,.85));
+    border:1px solid rgba(124,242,200,.4);border-radius:14px;backdrop-filter:blur(8px);
+    box-shadow:0 0 40px rgba(80,200,255,.25);display:none;color:#dff7ec;
+  }
+  #info-card.show{display:block;}
+  #info-card h3{font-size:13px;letter-spacing:.35em;color:var(--accent);text-transform:uppercase;}
+  #info-card .row{display:flex;justify-content:space-between;font-size:11px;margin-top:8px;opacity:.85;letter-spacing:.15em;}
+  #info-card .row b{color:#fff;font-weight:500;letter-spacing:.1em;}
+  #info-card .tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:9px;letter-spacing:.2em;margin-right:4px;margin-top:4px;}
+  #info-card .tag-elem{background:rgba(124,242,200,.2);color:var(--accent);border:1px solid rgba(124,242,200,.5);}
+  #info-card .tag-arm{background:rgba(255,154,80,.18);color:#ffb585;border:1px solid rgba(255,154,80,.4);}
+  #info-card .tag-weak{background:rgba(255,90,110,.18);color:#ff8aa0;border:1px solid rgba(255,90,110,.4);}
+  #info-card .tame{margin-top:8px;font-size:10px;letter-spacing:.25em;opacity:.7;}
+
+  /* Lock-on reticle drawn at target screen position */
+  #lock-reticle{
+    position:absolute;width:44px;height:44px;border:2px solid var(--accent);
+    border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;
+    box-shadow:0 0 18px rgba(124,242,200,.6);display:none;
+  }
+  #lock-reticle.show{display:block;animation:lockSpin 4s linear infinite;}
+  #lock-reticle::before,#lock-reticle::after{
+    content:'';position:absolute;background:var(--accent);
+  }
+  #lock-reticle::before{left:50%;top:-8px;width:2px;height:8px;transform:translateX(-50%);}
+  #lock-reticle::after{left:-8px;top:50%;width:8px;height:2px;transform:translateY(-50%);}
+  @keyframes lockSpin { to { transform:translate(-50%,-50%) rotate(360deg); } }
+
+  /* Inventory bar (top, below clock) */
+  #inv-bar{
+    position:absolute;top:calc(env(safe-area-inset-top,12px) + 52px);right:12px;
+    display:flex;gap:6px;padding:5px 9px;
+    background:var(--hud-bg);border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(8px);border-radius:99px;
+    font-size:11px;letter-spacing:.2em;
+  }
+  #inv-bar .pill{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.05);}
+  #inv-bar .pill .ic{font-size:13px;}
+  #inv-bar .pill.bone{color:#e6e6e6;}
+  #inv-bar .pill.hide{color:#c9a577;}
+  #inv-bar .pill.meat{color:#ff8a8a;}
+
+  /* Damage / pickup floaters */
+  .floater{
+    position:absolute;font-size:14px;font-weight:700;letter-spacing:.05em;pointer-events:none;
+    text-shadow:0 2px 6px rgba(0,0,0,.7);
+    animation:floatUp 1.1s ease-out forwards;
+  }
+  .floater.dmg{color:#ffdc6a;}
+  .floater.crit{color:#ff6a6a;font-size:18px;}
+  .floater.pickup{color:var(--accent);font-size:12px;}
+  @keyframes floatUp{
+    0%   { transform:translateY(0)    scale(.7); opacity:0; }
+    20%  { transform:translateY(-12px) scale(1.1); opacity:1; }
+    100% { transform:translateY(-60px) scale(1);  opacity:0; }
+  }
+
+  /* Stage banner — appears on important moments */
+  #stage-banner{
+    position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);
+    font-size:clamp(20px,5vw,42px);letter-spacing:.4em;text-transform:uppercase;
+    color:var(--accent);text-shadow:0 0 30px rgba(124,242,200,.6);
+    pointer-events:none;opacity:0;transition:opacity .6s ease;font-weight:800;
+  }
+  #stage-banner.show{opacity:1;}
+
+  /* Vignette flash for damage taken */
+  #dmg-vignette{
+    position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 120px rgba(255,40,40,.0);
+    transition:box-shadow .25s ease;
+  }
+  #dmg-vignette.hit{box-shadow:inset 0 0 200px rgba(255,40,40,.65);}
+
+  /* Context prompt — appears near bottom centre when interact target is in range */
+  #ctx-prompt{
+    position:absolute;left:50%;bottom:32%;transform:translate(-50%,0);
+    padding:8px 14px;border-radius:99px;background:var(--hud-bg);
+    border:1px solid rgba(124,242,200,.45);backdrop-filter:blur(8px);
+    font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);
+    box-shadow:0 0 24px rgba(124,242,200,.2);display:none;
+    text-align:center;
+  }
+  #ctx-prompt.show{display:block;}
+  #ctx-prompt .key{
+    display:inline-block;padding:1px 7px;border:1px solid var(--accent);
+    border-radius:4px;font-size:9px;margin-right:6px;
+  }
+  #ctx-prompt.tame{border-color:rgba(255,210,80,.55);color:#ffe080;}
+  #ctx-prompt.tame .key{border-color:#ffe080;}
+  #ctx-prompt.mount{border-color:rgba(180,140,255,.55);color:#b8a3ff;}
+  #ctx-prompt.mount .key{border-color:#b8a3ff;}
+
+  /* Taming progress ring — drawn around target via translate */
+  #tame-ring{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:140px;height:140px;display:none;pointer-events:none;
+  }
+  #tame-ring.show{display:block;}
+  #tame-ring svg{width:100%;height:100%;}
+  #tame-ring .bg{stroke:rgba(255,255,255,.18);stroke-width:6;fill:none;}
+  #tame-ring .fg{stroke:#ffe080;stroke-width:6;fill:none;stroke-linecap:round;
+    transform:rotate(-90deg);transform-origin:50% 50%;
+    transition:stroke-dashoffset .12s linear;filter:drop-shadow(0 0 8px rgba(255,224,128,.7));}
+  #tame-ring .label{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:10px;letter-spacing:.3em;color:#ffe080;text-transform:uppercase;
+  }
+
+  /* Companion HUD pill, mount HUD */
+  #comp-bar{
+    position:absolute;bottom:calc(max(env(safe-area-inset-bottom,12px),12px) + 64px);left:12px;
+    padding:6px 12px;background:var(--hud-bg);border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(8px);border-radius:12px;display:none;min-width:140px;
+  }
+  #comp-bar.show{display:block;}
+  #comp-bar .nm{font-size:10px;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;}
+  #comp-bar .bar{margin-top:3px;height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #comp-bar .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#7cf2c8,#3aa377);}
+
+  #mount-bar{
+    position:absolute;top:calc(env(safe-area-inset-top,12px) + 100px);left:50%;transform:translateX(-50%);
+    padding:8px 18px;background:var(--hud-bg);border:1px solid rgba(180,140,255,.5);
+    backdrop-filter:blur(8px);border-radius:99px;display:none;
+    box-shadow:0 0 24px rgba(180,140,255,.25);
+  }
+  #mount-bar.show{display:block;}
+  #mount-bar .nm{font-size:11px;letter-spacing:.3em;color:#c8b8ff;text-transform:uppercase;}
+  #mount-bar .stm{margin-top:3px;height:4px;width:160px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #mount-bar .stm i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#fff0a8,#f5d36a);}
+
+  /* Modal panels (roost menu, skills) */
+  .modal{
+    position:fixed;inset:0;display:none;z-index:60;
+    background:rgba(4,8,10,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    align-items:center;justify-content:center;padding:24px;
+  }
+  .modal.show{display:flex;}
+  .modal .panel{
+    width:min(640px,100%);max-height:88vh;overflow:auto;
+    background:linear-gradient(180deg,rgba(12,28,22,.95),rgba(8,18,14,.95));
+    border:1px solid rgba(124,242,200,.4);border-radius:16px;padding:20px 22px;
+    box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 40px rgba(124,242,200,.15);
+  }
+  .modal h2{color:var(--accent);font-size:14px;letter-spacing:.42em;text-transform:uppercase;font-weight:700;}
+  .modal .sub{margin-top:4px;font-size:10px;letter-spacing:.3em;color:#9ad4be;opacity:.7;}
+  .modal .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+  .modal button{
+    padding:10px 18px;border-radius:10px;background:rgba(124,242,200,.1);
+    border:1px solid rgba(124,242,200,.5);color:var(--accent);font-size:11px;
+    letter-spacing:.25em;text-transform:uppercase;cursor:pointer;font-weight:600;
+  }
+  .modal button:active,.modal button.primary{background:rgba(124,242,200,.3);}
+  .modal button.danger{border-color:rgba(255,140,140,.55);color:#ff8a8a;background:rgba(255,140,140,.08);}
+  .modal .close{
+    position:absolute;top:14px;right:18px;border:none;background:transparent;color:#9ad4be;
+    font-size:24px;cursor:pointer;padding:0;letter-spacing:0;
+  }
+
+  /* Skill tree */
+  .skill-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:14px;}
+  .skill-col h3{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);
+    border-bottom:1px solid rgba(124,242,200,.2);padding-bottom:6px;margin-bottom:8px;}
+  .skill-col.hunter h3{color:#ff8aa0;border-color:rgba(255,138,160,.25);}
+  .skill-col.beast  h3{color:#b8a3ff;border-color:rgba(184,163,255,.25);}
+  .skill-col.surv   h3{color:#a0e890;border-color:rgba(160,232,144,.25);}
+  .skill-node{
+    margin-bottom:6px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:transform .08s;
+  }
+  .skill-node:active{transform:scale(.97);}
+  .skill-node .nm{font-size:11px;font-weight:600;letter-spacing:.1em;color:#fff;}
+  .skill-node .lv{font-size:10px;letter-spacing:.2em;color:var(--accent);float:right;}
+  .skill-node .desc{font-size:10px;letter-spacing:.05em;color:#cfe9d8;opacity:.7;margin-top:3px;}
+  .skill-node.max{opacity:.5;cursor:default;}
+  .skill-node.maxed .lv{color:#ffe080;}
+  .skill-col.hunter .skill-node .lv{color:#ff8aa0;}
+  .skill-col.beast  .skill-node .lv{color:#b8a3ff;}
+  .skill-col.surv   .skill-node .lv{color:#a0e890;}
+  .sp-pill{display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(255,224,128,.18);
+    border:1px solid rgba(255,224,128,.5);color:#ffe080;font-size:11px;letter-spacing:.2em;}
+
+  /* Roost menu list */
+  .roost-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+  .roost-list .opt{
+    padding:14px;border-radius:12px;border:1px solid rgba(124,242,200,.2);
+    background:rgba(255,255,255,.04);cursor:pointer;transition:transform .08s;
+  }
+  .roost-list .opt:active{transform:scale(.97);background:rgba(124,242,200,.1);}
+  .roost-list .opt .nm{font-size:12px;letter-spacing:.2em;color:#fff;font-weight:600;text-transform:uppercase;}
+  .roost-list .opt .desc{font-size:10px;color:#9ad4be;margin-top:4px;opacity:.7;}
+
+  /* Companions list inside roost menu */
+  .comp-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .comp-item{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  }
+  .comp-item .ico{width:24px;height:24px;border-radius:50%;background:#7cf2c8;flex:0 0 24px;}
+  .comp-item .nm{flex:1;font-size:11px;letter-spacing:.15em;color:#fff;}
+  .comp-item button{padding:5px 10px;font-size:9px;}
+  .comp-item.active{border-color:var(--accent);background:rgba(124,242,200,.1);}
+
   .hidden{display:none!important;}
 </style>
 </head>
@@ -140,7 +393,7 @@
 <!-- Boot screen -->
 <div id="boot">
   <h1>SAURIAN FRONTIER</h1>
-  <div class="sub">Stage I · The Wilds</div>
+  <div class="sub">Stage III · Bond &amp; Saddle</div>
   <div class="bar"><div class="fill" id="boot-fill"></div></div>
   <div class="tag" id="boot-status">awakening the prehistoric...</div>
   <button id="boot-start">Enter the Wilds</button>
@@ -158,10 +411,107 @@
   <div id="biome-banner">Greenleaf Plains</div>
   <div id="minimap"><canvas id="minimap-canvas" width="240" height="240"></canvas></div>
   <div id="help">
-    <b style="color:var(--accent);letter-spacing:.2em;">Stage I</b><br/>
-    Move · WASD / left stick<br/>
-    Camera · mouse / right swipe<br/>
-    Sprint · Shift · Jump · Space
+    <b style="color:var(--accent);letter-spacing:.2em;">Stage III</b><br/>
+    WASD · Shift · Space · F dodge<br/>
+    J light · K heavy · L lock · Q scan<br/>
+    E interact · M skills · ESC close
+  </div>
+
+  <div id="target-bar">
+    <div class="name">PARASAUR</div>
+    <div class="bar"><i></i></div>
+    <div class="sub">LV 1 · 80 / 80</div>
+  </div>
+
+  <div id="info-card">
+    <h3>—</h3>
+    <div class="row"><span>TIER</span><b>—</b></div>
+    <div class="row"><span>DIET</span><b>—</b></div>
+    <div class="row"><span>TAMING</span><b>—</b></div>
+    <div class="row" style="display:block;"><span>WEAKNESS</span><br/><span class="tags-elem"></span></div>
+    <div class="row" style="display:block;"><span>WEAK POINTS</span><br/><span class="tags-wp"></span></div>
+    <div class="tame">› hold SCAN to keep reading</div>
+  </div>
+
+  <div id="lock-reticle"></div>
+
+  <div id="inv-bar">
+    <div class="pill bone"><span class="ic">◇</span><span data-inv="bone">0</span></div>
+    <div class="pill hide"><span class="ic">▒</span><span data-inv="hide">0</span></div>
+    <div class="pill meat"><span class="ic">✦</span><span data-inv="meat">0</span></div>
+    <div class="pill" style="color:var(--accent);"><span class="ic">★</span>LV <span data-inv="level">1</span></div>
+  </div>
+
+  <div id="stage-banner"></div>
+  <div id="scan-overlay"></div>
+  <div id="scan-reticle"></div>
+  <div id="dmg-vignette"></div>
+
+  <div id="ctx-prompt"><span class="key">E</span><span class="ctx-text">INTERACT</span></div>
+  <div id="tame-ring">
+    <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44"></circle>
+    <circle class="fg" cx="50" cy="50" r="44" stroke-dasharray="276.46" stroke-dashoffset="276.46"></circle></svg>
+    <div class="label">TAMING</div>
+  </div>
+
+  <div id="comp-bar"><div class="nm">— · LV 1</div><div class="bar"><i></i></div></div>
+  <div id="mount-bar"><div class="nm">RIDING</div><div class="stm"><i></i></div></div>
+</div>
+
+<!-- Roost menu modal -->
+<div class="modal" id="modal-roost">
+  <div class="panel" style="position:relative;">
+    <button class="close" data-modal-close>×</button>
+    <h2>The Roost</h2>
+    <div class="sub">A safe place. Recover, train, summon.</div>
+    <div class="roost-list">
+      <div class="opt" data-roost="rest">
+        <div class="nm">Rest</div>
+        <div class="desc">Sleep until dawn. Full HP &amp; stamina.</div>
+      </div>
+      <div class="opt" data-roost="skills">
+        <div class="nm">Skill Tree</div>
+        <div class="desc">Spend skill points across three paths.</div>
+      </div>
+      <div class="opt" data-roost="companions">
+        <div class="nm">Companions</div>
+        <div class="desc">Choose your active battle dino.</div>
+      </div>
+      <div class="opt" data-roost="leave">
+        <div class="nm">Step Back Out</div>
+        <div class="desc">Return to the wilds.</div>
+      </div>
+    </div>
+    <div class="comp-list" id="comp-list" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Skill tree modal -->
+<div class="modal" id="modal-skills">
+  <div class="panel" style="position:relative;">
+    <button class="close" data-modal-close>×</button>
+    <h2>Skill Tree</h2>
+    <div class="sub">Three paths · spend with care</div>
+    <div style="margin-top:10px;">
+      Skill points · <span class="sp-pill" id="sp-count">0</span>
+    </div>
+    <div class="skill-cols">
+      <div class="skill-col hunter">
+        <h3>Hunter</h3>
+        <div data-skill-col="hunter"></div>
+      </div>
+      <div class="skill-col beast">
+        <h3>Beastmaster</h3>
+        <div data-skill-col="beast"></div>
+      </div>
+      <div class="skill-col surv">
+        <h3>Survivor</h3>
+        <div data-skill-col="surv"></div>
+      </div>
+    </div>
+    <div class="row-btns">
+      <button data-modal-close>Done</button>
+    </div>
   </div>
 </div>
 
@@ -170,10 +520,15 @@
   <div id="stick-zone"><div id="stick"><div class="nub"></div></div></div>
   <div id="cam-zone"></div>
   <div id="buttons">
-    <div class="btn btn-sprint" data-act="sprint"><div><div class="glyph">»</div>RUN</div></div>
-    <div class="btn btn-jump" data-act="jump"><div><div class="glyph">▲</div>JUMP</div></div>
-    <div class="btn btn-scan" data-act="scan"><div><div class="glyph">◎</div>SCAN</div></div>
-    <div class="btn btn-action" data-act="action"><div><div class="glyph">✦</div>ACT</div></div>
+    <div class="btn btn-sm btn-lock" data-act="lock">LOCK</div>
+    <div class="btn btn-sm btn-scan" data-act="scan">SCAN</div>
+    <div class="btn btn-sm btn-cycle" data-act="cycle">CYCLE</div>
+    <div class="btn btn-sprint" data-act="sprint"><div><span class="glyph">»</span>RUN</div></div>
+    <div class="btn btn-jump" data-act="jump"><div><span class="glyph">▲</span>JUMP</div></div>
+    <div class="btn btn-dodge" data-act="dodge"><div><span class="glyph">◇</span>ROLL</div></div>
+    <div class="btn btn-heavy" data-act="heavy"><div><span class="glyph">✦</span>HEAVY</div></div>
+    <div class="btn btn-action" data-act="action"><div><span class="glyph">✧</span>ACT</div></div>
+    <div class="btn btn-attack" data-act="attack"><div><span class="glyph">⚔</span>HIT</div></div>
   </div>
 </div>
 
@@ -638,6 +993,17 @@ const PLAYER = {
   hp: 100, hpMax: 100,
   sp: 100, spMax: 100,
   sprinting: false,
+  // Combat / Stage II additions
+  combatState: 'idle',     // idle | windup | active | recovery | dodge
+  combatTimer: 0,
+  combatAction: null,      // current attack definition
+  comboIndex: 0,           // 0 = next is jab, 1 = next is thrust
+  comboWindow: 0,          // time left to chain
+  invuln: 0,               // seconds remaining of i-frames
+  hitCD: 0,                // recent-hit cooldown
+  dodgeDir: new THREE.Vector3(),
+  level: 1, xp: 0, xpNext: 100,
+  hitFlash: 0,
 };
 
 /* Build a simple low-poly humanoid: body + head + arms + legs as one group. */
@@ -673,14 +1039,48 @@ function makePlayerMesh(){
   const legL = new THREE.Mesh(legGeo, legMat); legL.position.set( 0.22, 0.5, 0); legL.castShadow = true; g.add(legL);
   const legR = new THREE.Mesh(legGeo, legMat); legR.position.set(-0.22, 0.5, 0); legR.castShadow = true; g.add(legR);
 
-  // spear back-prop
-  const spear = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), toonMat(0x6e4a30,{flatShading:true}));
-  spear.position.set(-0.3, 1.6, 0.4); spear.rotation.set(0.4, 0, -0.6); g.add(spear);
-  const head2 = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 6), toonMat(0xb3c0c8,{flatShading:true}));
-  head2.position.set(-0.6, 2.55, 0.55); head2.rotation.set(0.4, 0, -0.6); g.add(head2);
+  // spear back-prop (sheathed when idle)
+  const sheath = new THREE.Group();
+  const sShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 6), toonMat(0x6e4a30,{flatShading:true}));
+  sShaft.position.set(-0.3, 1.6, 0.4); sShaft.rotation.set(0.4, 0, -0.6); sheath.add(sShaft);
+  const sHead = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 6), toonMat(0xb3c0c8,{flatShading:true}));
+  sHead.position.set(-0.6, 2.55, 0.55); sHead.rotation.set(0.4, 0, -0.6); sheath.add(sHead);
+  g.add(sheath);
+
+  // Active weapon pivot at the right hand. Rotated during attacks.
+  const weaponPivot = new THREE.Group();
+  weaponPivot.position.set(0.6, 1.15, 0);  // attaches near right arm
+  // resting pose: held vertically along the arm
+  weaponPivot.rotation.set(-0.2, 0, 0);
+  g.add(weaponPivot);
+
+  const weapon = new THREE.Group();
+  const wShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 6), toonMat(0x6e4a30,{flatShading:true}));
+  wShaft.position.set(0, 0.6, 0);
+  weapon.add(wShaft);
+  const wHead = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.5, 6), toonMat(0xd6e4ec,{flatShading:true}));
+  wHead.position.set(0, 1.9, 0);
+  weapon.add(wHead);
+  // tiny wraps for style
+  const wWrap = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.18, 6), toonMat(0x3a8460,{flatShading:true}));
+  wWrap.position.set(0, 0.2, 0);
+  weapon.add(wWrap);
+  weapon.visible = false; // hidden until combat draws it
+  weaponPivot.add(weapon);
+
+  // Weapon trail (thin plane). Hidden by default; faded during active swing.
+  const trailGeo = new THREE.PlaneGeometry(2.6, 0.5);
+  trailGeo.translate(0, 1.3, 0);
+  const trailMat = new THREE.MeshBasicMaterial({
+    color: 0x7cf2c8, transparent: true, opacity: 0, side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const trail = new THREE.Mesh(trailGeo, trailMat);
+  weaponPivot.add(trail);
+  trail.visible = false;
 
   // remember limbs for animation
-  g.userData.parts = { armL, armR, legL, legR, body, head };
+  g.userData.parts = { armL, armR, legL, legR, body, head, weaponPivot, weapon, sheath, trail, trailMat };
   return g;
 }
 const playerMesh = makePlayerMesh();
@@ -734,8 +1134,14 @@ const INPUT = {
 // Keyboard
 const keys = {};
 addEventListener('keydown', e => {
+  if (keys[e.code]) return; // ignore repeat
   keys[e.code] = true;
   if (e.code === 'Space') INPUT.jumpPressed = true;
+  if (e.code === 'KeyJ') INPUT_EDGE.attack = true;
+  if (e.code === 'KeyK') INPUT_EDGE.heavy  = true;
+  if (e.code === 'KeyF') INPUT_EDGE.dodge  = true;
+  if (e.code === 'KeyL') INPUT_EDGE.lock   = true;
+  if (e.code === 'Tab')  { INPUT_EDGE.cycle = true; e.preventDefault(); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -837,7 +1243,7 @@ camZone.addEventListener('touchend', e => {
   }
 });
 
-// Buttons
+// Buttons — held flags for continuous actions, edges for taps.
 document.querySelectorAll('.btn').forEach(b => {
   const act = b.dataset.act;
   const press = e => {
@@ -847,6 +1253,11 @@ document.querySelectorAll('.btn').forEach(b => {
     if (act === 'jump')   INPUT.jumpPressed = true;
     if (act === 'scan')   INPUT.scan = true;
     if (act === 'action') INPUT.action = true;
+    if (act === 'attack') INPUT_EDGE.attack = true;
+    if (act === 'heavy')  INPUT_EDGE.heavy  = true;
+    if (act === 'dodge')  INPUT_EDGE.dodge  = true;
+    if (act === 'lock')   INPUT_EDGE.lock   = true;
+    if (act === 'cycle')  INPUT_EDGE.cycle  = true;
   };
   const release = e => {
     e.preventDefault();
@@ -865,7 +1276,7 @@ document.querySelectorAll('.btn').forEach(b => {
 // Gamepad polling
 addEventListener('gamepadconnected', e => { INPUT.gamepadIndex = e.gamepad.index; });
 addEventListener('gamepaddisconnected', e => { if (INPUT.gamepadIndex === e.gamepad.index) INPUT.gamepadIndex = -1; });
-let lastJumpBtn = false;
+const _gpPrev = {};
 function pollGamepad(){
   if (INPUT.gamepadIndex < 0) return;
   const gp = navigator.getGamepads?.()[INPUT.gamepadIndex];
@@ -876,11 +1287,21 @@ function pollGamepad(){
   INPUT.cam.dx += dz(gp.axes[2]) * 18;
   INPUT.cam.dy += dz(gp.axes[3]) * 14;
   INPUT.sprint = gp.buttons[10]?.pressed || gp.buttons[6]?.pressed;
-  const jumpNow = gp.buttons[0]?.pressed;
-  if (jumpNow && !lastJumpBtn) INPUT.jumpPressed = true;
-  lastJumpBtn = jumpNow;
-  INPUT.action = gp.buttons[2]?.pressed;
-  INPUT.scan   = gp.buttons[3]?.pressed;
+  INPUT.scan   = gp.buttons[4]?.pressed; // LB hold
+  const edge = (i, key) => {
+    const now = !!gp.buttons[i]?.pressed;
+    if (now && !_gpPrev[i]) INPUT_EDGE[key] = true;
+    _gpPrev[i] = now;
+  };
+  // A=jump, B=dodge, X=attack, Y=heavy, RB=lock, RT=cycle
+  edge(2, 'attack');
+  edge(3, 'heavy');
+  edge(1, 'dodge');
+  edge(5, 'lock');
+  edge(7, 'cycle');
+  const jumpNow = !!gp.buttons[0]?.pressed;
+  if (jumpNow && !_gpPrev._j) INPUT.jumpPressed = true;
+  _gpPrev._j = jumpNow;
 }
 
 /* Build per-frame movement intent from keyboard. */
@@ -899,26 +1320,588 @@ function pollKeyboard(){
   INPUT.action = !!keys['KeyE'] || INPUT.action;
 }
 
+/* ---------- 8b. Combat, Lock-on, Scan (Stage II) ----------------------- */
+
+/* Attack definitions — windup → active → recovery in seconds. */
+const ATTACKS = {
+  jab:    { name:'Jab',    damage: 16, stamina: 6,  windup: 0.10, active: 0.16, recovery: 0.24, reach: 2.6, arc: 0.7, knock: 4,  swing: { from: 1.6, to: -0.4 } },
+  thrust: { name:'Thrust', damage: 22, stamina: 8,  windup: 0.14, active: 0.18, recovery: 0.30, reach: 3.0, arc: 0.5, knock: 5,  swing: { from: 1.2, to: -1.0 } },
+  heavy:  { name:'Heavy',  damage: 55, stamina:25,  windup: 0.42, active: 0.22, recovery: 0.55, reach: 2.8, arc: 1.2, knock: 12, swing: { from: 2.4, to: -1.4 }, crit:true },
+};
+
+const DODGE = { duration: 0.45, distance: 8, stamina: 18, iframes: 0.22 };
+
+/* Lock-on state. */
+const LOCK = {
+  active: false,
+  target: null,
+  acquireRange: 35,
+  loseRange: 55,
+};
+
+/* Scan state. */
+const SCAN = {
+  active: false,
+  target: null,
+  fadeIn: 0,           // 0..1 visual intensity
+  examineTime: 0,      // builds up while hovering same target
+};
+
+/* Dino-dex entries — element weaknesses & weak points for scan info card. */
+const DINODEX = {
+  parasaur: {
+    name: 'Parasaurolophus',
+    tier: 'Common',
+    diet: 'Herbivore',
+    weakness: ['Shock'],
+    weakpoints: ['Crest', 'Belly'],
+    tameMethod: 'Stealth feed berries',
+    color: 0x6c9b5a,
+  },
+  raptor: {
+    name: 'Velociraptor',
+    tier: 'Common',
+    diet: 'Carnivore',
+    weakness: ['Fire'],
+    weakpoints: ['Hind legs', 'Throat'],
+    tameMethod: 'Weaken-then-tranq',
+    color: 0x854a30,
+  },
+  trike: {
+    name: 'Triceratops',
+    tier: 'Rare',
+    diet: 'Herbivore',
+    weakness: ['Ice', 'Shock'],
+    weakpoints: ['Hind legs', 'Flank'],
+    tameMethod: 'Lasso ride & break',
+    color: 0x8c6a4a,
+  },
+};
+
+/* Input edges for tap-only actions. */
+const INPUT_EDGE = {
+  attack: false,
+  heavy: false,
+  dodge: false,
+  lock: false,
+  cycle: false,
+  action: false,
+};
+
+/* Try to start a new attack. Returns true if started. */
+function tryAttack(kind){
+  if (PLAYER.combatState !== 'idle' && PLAYER.combatState !== 'recovery') return false;
+  const def = ATTACKS[kind];
+  if (!def) return false;
+  if (PLAYER.sp < def.stamina) return false;
+  PLAYER.sp -= def.stamina;
+  PLAYER.combatAction = def;
+  PLAYER.combatState = 'windup';
+  PLAYER.combatTimer = 0;
+  PLAYER.alreadyHit = new Set();
+  // Show weapon
+  const parts = playerMesh.userData.parts;
+  parts.weapon.visible = true;
+  parts.sheath.visible = false;
+  // If locked-on, face target
+  if (LOCK.active && LOCK.target){
+    const dx = LOCK.target.pos.x - PLAYER.pos.x;
+    const dz = LOCK.target.pos.z - PLAYER.pos.z;
+    if (dx || dz) PLAYER.yaw = Math.atan2(dx, dz);
+  }
+  return true;
+}
+
+/* Dodge in current move direction (or facing if no input). i-frames + dash. */
+function tryDodge(){
+  if (PLAYER.combatState === 'dodge') return false;
+  if (PLAYER.sp < DODGE.stamina) return false;
+  PLAYER.sp -= DODGE.stamina;
+  PLAYER.combatState = 'dodge';
+  PLAYER.combatTimer = 0;
+  PLAYER.invuln = DODGE.iframes;
+  // Direction: prefer current move intent, else backward
+  const m = INPUT.move;
+  if (m.x || m.y){
+    const camForward = new THREE.Vector3(-Math.sin(CAM.yaw), 0, -Math.cos(CAM.yaw)).normalize();
+    const camRight   = new THREE.Vector3(-camForward.z, 0, camForward.x).normalize();
+    const dir = new THREE.Vector3();
+    dir.addScaledVector(camForward, -m.y);
+    dir.addScaledVector(camRight, m.x);
+    if (dir.lengthSq() > 0) dir.normalize();
+    PLAYER.dodgeDir.copy(dir);
+  } else {
+    PLAYER.dodgeDir.set(-Math.sin(PLAYER.yaw), 0, -Math.cos(PLAYER.yaw)); // backstep
+  }
+  return true;
+}
+
+/* Per-frame combat state machine + weapon animation. */
+function updateCombat(dt){
+  PLAYER.invuln = Math.max(0, PLAYER.invuln - dt);
+  PLAYER.hitCD = Math.max(0, PLAYER.hitCD - dt);
+  PLAYER.hitFlash = Math.max(0, PLAYER.hitFlash - dt * 3);
+  if (PLAYER.comboWindow > 0) PLAYER.comboWindow = Math.max(0, PLAYER.comboWindow - dt);
+  else PLAYER.comboIndex = 0;
+
+  const parts = playerMesh.userData.parts;
+
+  if (PLAYER.combatState === 'idle'){
+    // Slowly hide weapon if combat hasn't started recently
+    PLAYER.combatTimer += dt;
+    if (PLAYER.combatTimer > 2.5 && parts.weapon.visible){
+      parts.weapon.visible = false;
+      parts.sheath.visible = true;
+    }
+    return;
+  }
+
+  if (PLAYER.combatState === 'dodge'){
+    PLAYER.combatTimer += dt;
+    const t = PLAYER.combatTimer / DODGE.duration;
+    // ease-out dash speed
+    const speed = DODGE.distance * (1 - t) / DODGE.duration;
+    PLAYER.vel.x = PLAYER.dodgeDir.x * speed;
+    PLAYER.vel.z = PLAYER.dodgeDir.z * speed;
+    // rolling animation
+    playerMesh.rotation.x = t * Math.PI * 2;
+    if (t >= 1){
+      PLAYER.combatState = 'idle';
+      PLAYER.combatTimer = 0;
+      playerMesh.rotation.x = 0;
+    }
+    return;
+  }
+
+  const a = PLAYER.combatAction;
+  if (!a) return;
+  PLAYER.combatTimer += dt;
+  const totalUntilActive = a.windup;
+  const totalUntilRecovery = a.windup + a.active;
+  const totalEnd = a.windup + a.active + a.recovery;
+  const t = PLAYER.combatTimer;
+
+  // Drive weapon pivot rotation across attack
+  const swing = a.swing;
+  let phase;
+  if (t < totalUntilActive){
+    phase = t / a.windup; // 0..1 windup
+    parts.weaponPivot.rotation.x = lerp(0, swing.from, smoothstep(0, 1, phase));
+    parts.trail.visible = false;
+    parts.trailMat.opacity = 0;
+    PLAYER.combatState = 'windup';
+  } else if (t < totalUntilRecovery){
+    phase = (t - totalUntilActive) / a.active; // 0..1 active swing
+    parts.weaponPivot.rotation.x = lerp(swing.from, swing.to, smoothstep(0, 1, phase));
+    parts.trail.visible = true;
+    parts.trailMat.opacity = lerp(0.6, 0, phase);
+    PLAYER.combatState = 'active';
+    // Hit check (once per dino per attack)
+    doMeleeHitCheck(a);
+  } else if (t < totalEnd){
+    phase = (t - totalUntilRecovery) / a.recovery;
+    parts.weaponPivot.rotation.x = lerp(swing.to, 0, smoothstep(0, 1, phase));
+    parts.trail.visible = false;
+    parts.trailMat.opacity = 0;
+    PLAYER.combatState = 'recovery';
+  } else {
+    parts.weaponPivot.rotation.x = 0;
+    parts.trail.visible = false;
+    parts.trailMat.opacity = 0;
+    PLAYER.combatState = 'idle';
+    PLAYER.combatTimer = 0;
+    PLAYER.combatAction = null;
+    PLAYER.comboIndex = (PLAYER.comboIndex + 1) % 2;
+    PLAYER.comboWindow = 0.6;
+  }
+
+  // Arms shadow the weapon swing slightly
+  parts.armR.rotation.x = -parts.weaponPivot.rotation.x * 0.5;
+  parts.armL.rotation.x =  parts.weaponPivot.rotation.x * 0.25;
+}
+
+/* Sweep-test the melee hit volume against each dino. */
+function doMeleeHitCheck(action){
+  const forward = new THREE.Vector3(Math.sin(PLAYER.yaw), 0, Math.cos(PLAYER.yaw));
+  const arc = action.arc * (typeof M !== 'undefined' ? M.hitArc() : 1);
+  const dmgMul = (typeof M !== 'undefined' ? M.meleeDmg() : 1);
+  for (const d of dinos){
+    if (d.dying) continue;
+    if (d.tamed) continue;        // never hit our own companions
+    if (PLAYER.alreadyHit.has(d)) continue;
+    const dx = d.pos.x - PLAYER.pos.x;
+    const dz = d.pos.z - PLAYER.pos.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > action.reach + d.profile.size * 0.8) continue;
+    const dirN = dist > 0 ? { x: dx / dist, z: dz / dist } : { x: 0, z: 0 };
+    const dot = dirN.x * forward.x + dirN.z * forward.z;
+    if (dot < Math.cos(arc)) continue;
+    PLAYER.alreadyHit.add(d);
+    const isFlank = dot < Math.cos(arc * 0.5);
+    const isCrit = !!action.crit || isFlank;
+    const dmg = action.damage * (isCrit ? 1.6 : 1) * (1 + PLAYER.level * 0.08) * dmgMul;
+    d.takeDamage(dmg, isCrit, forward);
+    addScreenShake(action.crit ? 0.45 : 0.18);
+    spawnHitSparks(d.pos.x, d.pos.y + d.profile.size * 1.4, d.pos.z, isCrit);
+  }
+}
+
+/* Update lock-on target each frame. */
+function updateLockOn(dt){
+  if (!LOCK.active){ hideLockUI(); return; }
+  if (!LOCK.target || LOCK.target.dying || LOCK.target.removed){
+    // try to re-acquire
+    LOCK.target = pickNearestEnemy(LOCK.acquireRange);
+    if (!LOCK.target){ LOCK.active = false; hideLockUI(); return; }
+  }
+  const d = LOCK.target.pos.distanceTo(PLAYER.pos);
+  if (d > LOCK.loseRange){ LOCK.active = false; LOCK.target = null; hideLockUI(); return; }
+  // Pull CAM yaw to look toward the line player→target
+  const dx = LOCK.target.pos.x - PLAYER.pos.x;
+  const dz = LOCK.target.pos.z - PLAYER.pos.z;
+  const wantYaw = Math.atan2(-dx, -dz); // camera yaw such that camForward points at target
+  let dy = wantYaw - CAM.yaw;
+  while (dy >  Math.PI) dy -= TAU;
+  while (dy < -Math.PI) dy += TAU;
+  CAM.yaw += dy * Math.min(1, dt * 4);
+  CAM.pitch = lerp(CAM.pitch, 0.18, Math.min(1, dt * 3));
+
+  // Update target bar UI + 3D lock reticle position
+  showTargetBar(LOCK.target);
+  positionLockReticle(LOCK.target);
+}
+
+function pickNearestEnemy(range){
+  let best = null, bestD = range * range;
+  for (const d of dinos){
+    if (d.dying || d.tamed) continue;
+    const dist2 = d.pos.distanceToSquared(PLAYER.pos);
+    if (dist2 < bestD){ bestD = dist2; best = d; }
+  }
+  return best;
+}
+function cycleLockTarget(){
+  if (!LOCK.active) return;
+  const list = dinos.filter(d => !d.dying && !d.tamed && d.pos.distanceTo(PLAYER.pos) < LOCK.loseRange);
+  if (list.length === 0){ LOCK.active = false; return; }
+  const idx = list.indexOf(LOCK.target);
+  LOCK.target = list[(idx + 1) % list.length];
+}
+
+function showTargetBar(d){
+  const el = $targetBar;
+  el.classList.add('show');
+  el.querySelector('.name').textContent = (DINODEX[d.species]?.name || d.species).toUpperCase();
+  el.querySelector('.bar i').style.width = (d.hp / d.hpMax * 100) + '%';
+  el.querySelector('.sub').textContent = `LV ${d.level} · ${Math.ceil(d.hp)} / ${d.hpMax}`;
+}
+function hideTargetBar(){ $targetBar.classList.remove('show'); }
+function hideLockUI(){ $lockReticle.classList.remove('show'); if (!SCAN.active) hideTargetBar(); }
+
+const _vTmp = new THREE.Vector3();
+function positionLockReticle(d){
+  _vTmp.copy(d.pos); _vTmp.y += d.profile.size * 2.0;
+  _vTmp.project(camera);
+  const x = (_vTmp.x * 0.5 + 0.5) * innerWidth;
+  const y = (-_vTmp.y * 0.5 + 0.5) * innerHeight;
+  if (_vTmp.z < 1){
+    $lockReticle.classList.add('show');
+    $lockReticle.style.left = x + 'px';
+    $lockReticle.style.top  = y + 'px';
+  } else {
+    $lockReticle.classList.remove('show');
+  }
+}
+
+/* Scan mode. While held, slow time, tint overlay, find the dino closest to crosshair. */
+function updateScan(dt){
+  const want = INPUT.scan ? 1 : 0;
+  SCAN.fadeIn = lerp(SCAN.fadeIn, want, Math.min(1, dt * 6));
+  if (want){
+    SCAN.active = true;
+    $scanOverlay.classList.add('on');
+  } else if (SCAN.fadeIn < 0.05){
+    SCAN.active = false;
+    $scanOverlay.classList.remove('on');
+    $infoCard.classList.remove('show');
+    if (!LOCK.active) hideTargetBar();
+    SCAN.target = null;
+    SCAN.examineTime = 0;
+    return;
+  }
+  if (!SCAN.active) return;
+  // Aim ray: from camera through screen center
+  const ray = new THREE.Vector3(0, 0, -1).unproject(camera).sub(camera.position).normalize();
+  let best = null, bestDot = 0.8;
+  for (const d of dinos){
+    if (d.dying || d.tamed) continue;
+    const toD = _vTmp.copy(d.pos).sub(camera.position);
+    const distSq = toD.lengthSq();
+    if (distSq > 80*80) continue;
+    toD.normalize();
+    const dot = toD.dot(ray);
+    if (dot > bestDot){ bestDot = dot; best = d; }
+  }
+  if (best){
+    if (best === SCAN.target) SCAN.examineTime += dt;
+    else { SCAN.target = best; SCAN.examineTime = 0; }
+    showInfoCard(best);
+    showTargetBar(best);
+  } else {
+    $infoCard.classList.remove('show');
+    if (!LOCK.active) hideTargetBar();
+    SCAN.examineTime = 0;
+  }
+}
+
+function showInfoCard(d){
+  const info = DINODEX[d.species] || { name: d.species, tier: '—', diet: '—', weakness: [], weakpoints: [], tameMethod: '—' };
+  $infoCard.classList.add('show');
+  $infoCard.querySelector('h3').textContent = info.name;
+  const rows = $infoCard.querySelectorAll('.row b');
+  rows[0].textContent = info.tier;
+  rows[1].textContent = info.diet;
+  rows[2].textContent = info.tameMethod;
+  $infoCard.querySelector('.tags-elem').innerHTML = info.weakness.map(w => `<span class="tag tag-weak">${w}</span>`).join('') || '<span class="tag tag-arm">None</span>';
+  $infoCard.querySelector('.tags-wp').innerHTML   = info.weakpoints.map(w => `<span class="tag tag-arm">${w}</span>`).join('');
+}
+
+/* Screen shake — additive offset applied to the camera each frame. */
+const SHAKE = { mag: 0, time: 0 };
+function addScreenShake(m){ SHAKE.mag = Math.max(SHAKE.mag, m); SHAKE.time = 0.25; }
+function applyShake(dt){
+  if (SHAKE.time <= 0) return new THREE.Vector3();
+  SHAKE.time -= dt;
+  const t = SHAKE.mag * Math.max(0, SHAKE.time / 0.25);
+  const v = new THREE.Vector3((Math.random()-0.5)*t, (Math.random()-0.5)*t, (Math.random()-0.5)*t);
+  if (SHAKE.time <= 0){ SHAKE.mag = 0; }
+  return v;
+}
+
+/* Hit spark particles — pooled tiny meshes. */
+const SPARKS = { pool: [], i: 0, max: 80 };
+function initSparks(){
+  const geo = new THREE.IcosahedronGeometry(0.12, 0);
+  for (let i = 0; i < SPARKS.max; i++){
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffe080 }));
+    m.visible = false;
+    scene.add(m);
+    SPARKS.pool.push({ mesh: m, vel: new THREE.Vector3(), life: 0, maxLife: 0, color: 0xffe080 });
+  }
+}
+function spawnHitSparks(x, y, z, crit){
+  const count = crit ? 12 : 6;
+  for (let i = 0; i < count; i++){
+    const p = SPARKS.pool[SPARKS.i % SPARKS.max];
+    SPARKS.i++;
+    p.mesh.position.set(x, y, z);
+    p.mesh.visible = true;
+    const dir = new THREE.Vector3((Math.random()-0.5)*2, Math.random()*1.4, (Math.random()-0.5)*2).normalize();
+    const speed = 4 + Math.random() * 6;
+    p.vel.copy(dir).multiplyScalar(speed);
+    p.life = 0;
+    p.maxLife = 0.5 + Math.random() * 0.3;
+    p.mesh.scale.setScalar(crit ? 1.4 : 1);
+    p.mesh.material.color.setHex(crit ? 0xff7a55 : 0xffe080);
+  }
+}
+function updateSparks(dt){
+  for (const p of SPARKS.pool){
+    if (!p.mesh.visible) continue;
+    p.life += dt;
+    if (p.life >= p.maxLife){ p.mesh.visible = false; continue; }
+    p.vel.y -= 18 * dt;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    p.mesh.scale.setScalar(0.7 + (1 - p.life / p.maxLife) * 0.6);
+  }
+}
+
+/* DOM floaters — damage numbers, pickup callouts. */
+const $hud = document.getElementById('hud');
+function spawnFloater(text, cls, worldPos){
+  const el = document.createElement('div');
+  el.className = `floater ${cls}`;
+  el.textContent = text;
+  $hud.appendChild(el);
+  // initial screen position from world projection
+  const v = _vTmp.copy(worldPos).project(camera);
+  const x = (v.x * 0.5 + 0.5) * innerWidth;
+  const y = (-v.y * 0.5 + 0.5) * innerHeight;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  setTimeout(() => el.remove(), 1200);
+}
+
+/* Loot pickups — small floating items on the ground. */
+const LOOT_ITEMS = [];
+const LOOT_TABLE = {
+  parasaur: { meat:[1,3], hide:[1,2], bone:[1,1] },
+  raptor:   { meat:[1,2], hide:[1,2], bone:[1,3] },
+  trike:    { meat:[2,4], hide:[2,4], bone:[2,5] },
+};
+const LOOT_COLORS = { bone: 0xeeeae0, hide: 0xc9a577, meat: 0xff8a8a };
+function spawnLoot(species, x, y, z){
+  const table = LOOT_TABLE[species] || LOOT_TABLE.parasaur;
+  const bonus = (typeof M !== 'undefined') ? M.dropBonus() : 1;
+  for (const k in table){
+    const [lo, hi] = table[k];
+    let count = randInt(lo, hi);
+    count = Math.round(count * bonus);
+    if (count <= 0) continue;
+    const mesh = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.4, 0),
+      toonMat(LOOT_COLORS[k], { flatShading:true })
+    );
+    mesh.position.set(x + rand(-1.2, 1.2), y + 0.5, z + rand(-1.2, 1.2));
+    scene.add(mesh);
+    LOOT_ITEMS.push({ mesh, item: k, count, spin: rand(0.4, 1.6), bob: rand(0, TAU) });
+  }
+}
+function updateLoot(dt){
+  const t = performance.now() * 0.002;
+  for (let i = LOOT_ITEMS.length - 1; i >= 0; i--){
+    const L = LOOT_ITEMS[i];
+    L.mesh.rotation.y += dt * L.spin * 2;
+    L.mesh.position.y = heightAt(L.mesh.position.x, L.mesh.position.z) + 0.55 + Math.sin(t + L.bob) * 0.15;
+    // pickup proximity
+    const dx = L.mesh.position.x - PLAYER.pos.x;
+    const dz = L.mesh.position.z - PLAYER.pos.z;
+    const r = (typeof M !== 'undefined') ? M.pickupR() : Math.sqrt(6);
+    if (dx*dx + dz*dz < r * r){
+      INVENTORY[L.item] = (INVENTORY[L.item] || 0) + L.count;
+      spawnFloater(`+${L.count} ${L.item}`, 'pickup', L.mesh.position);
+      scene.remove(L.mesh);
+      L.mesh.geometry.dispose();
+      LOOT_ITEMS.splice(i, 1);
+      refreshInv();
+    }
+  }
+}
+
+/* Inventory + XP — track + DOM refresh. */
+const INVENTORY = { bone: 0, hide: 0, meat: 0 };
+function refreshInv(){
+  document.querySelector('[data-inv="bone"]').textContent = INVENTORY.bone;
+  document.querySelector('[data-inv="hide"]').textContent = INVENTORY.hide;
+  document.querySelector('[data-inv="meat"]').textContent = INVENTORY.meat;
+  document.querySelector('[data-inv="level"]').textContent = PLAYER.level;
+}
+
+function gainXP(amount){
+  PLAYER.xp += amount;
+  while (PLAYER.xp >= PLAYER.xpNext){
+    PLAYER.xp -= PLAYER.xpNext;
+    PLAYER.level++;
+    PLAYER.xpNext = Math.floor(PLAYER.xpNext * 1.4);
+    // Recompute caps via skill multipliers (handles Stage III post-skills too).
+    if (typeof SKILLS !== 'undefined'){
+      SKILLS.points++;
+      PLAYER.hpMax = M.hpMax();
+      PLAYER.spMax = M.stamMax();
+    } else {
+      PLAYER.hpMax += 10; PLAYER.spMax += 5;
+    }
+    PLAYER.hp = PLAYER.hpMax; PLAYER.sp = PLAYER.spMax;
+    showBanner(`LEVEL UP · ${PLAYER.level} · +1 SKILL POINT`, 2200);
+  }
+  refreshInv();
+}
+
+const $stageBanner = document.getElementById('stage-banner');
+let bannerHide;
+function showBanner(text, ms = 2000){
+  $stageBanner.textContent = text;
+  $stageBanner.classList.add('show');
+  clearTimeout(bannerHide);
+  bannerHide = setTimeout(() => $stageBanner.classList.remove('show'), ms);
+}
+
+/* Damage to player (called by Dino during attacks). */
+function damagePlayer(amount, fromPos){
+  if (PLAYER.invuln > 0) return;
+  if (PLAYER.hitCD > 0) return;
+  PLAYER.hp = Math.max(0, PLAYER.hp - amount);
+  PLAYER.hitCD = 0.9;
+  PLAYER.hitFlash = 1.0;
+  // Knockback
+  const dx = PLAYER.pos.x - fromPos.x;
+  const dz = PLAYER.pos.z - fromPos.z;
+  const d = Math.hypot(dx, dz) || 1;
+  PLAYER.vel.x += (dx / d) * 14;
+  PLAYER.vel.z += (dz / d) * 14;
+  PLAYER.vel.y = 5;
+  addScreenShake(0.35);
+  $dmgVignette.classList.add('hit');
+  setTimeout(() => $dmgVignette.classList.remove('hit'), 220);
+  if (PLAYER.hp <= 0){
+    showBanner('Defeated · respawning', 1800);
+    setTimeout(respawnPlayer, 1500);
+  }
+}
+function respawnPlayer(){
+  PLAYER.hp = PLAYER.hpMax;
+  PLAYER.sp = PLAYER.spMax;
+  PLAYER.pos.set(0, heightAt(0, 30) + 2, 30);
+  PLAYER.vel.set(0, 0, 0);
+  PLAYER.combatState = 'idle';
+  PLAYER.combatTimer = 0;
+}
+
+/* Cached DOM refs used above. */
+const $targetBar = document.getElementById('target-bar');
+const $infoCard = document.getElementById('info-card');
+const $lockReticle = document.getElementById('lock-reticle');
+const $scanOverlay = document.getElementById('scan-overlay');
+const $dmgVignette = document.getElementById('dmg-vignette');
+
 /* ---------- 9. Player update ------------------------------------------ */
 
 function updatePlayer(dt){
   pollKeyboard();
   pollGamepad();
 
-  // Camera rotation from deltas
+  // Pause input-driven action while a modal is open
+  if (anyModalOpen()){
+    INPUT.cam.dx = 0; INPUT.cam.dy = 0;
+    INPUT_EDGE.attack = INPUT_EDGE.heavy = INPUT_EDGE.dodge = INPUT_EDGE.lock = INPUT_EDGE.cycle = false;
+    return;
+  }
+
+  // Consume one-shot edge actions (skipped when mounted — mount handles its own)
+  if (!MOUNT.active){
+    if (INPUT_EDGE.lock){
+      INPUT_EDGE.lock = false;
+      if (LOCK.active){ LOCK.active = false; LOCK.target = null; hideLockUI(); }
+      else { LOCK.target = pickNearestEnemy(LOCK.acquireRange); if (LOCK.target) LOCK.active = true; }
+    }
+    if (INPUT_EDGE.cycle){ INPUT_EDGE.cycle = false; cycleLockTarget(); }
+    if (INPUT_EDGE.dodge){ INPUT_EDGE.dodge = false; tryDodge(); }
+    if (INPUT_EDGE.attack){
+      INPUT_EDGE.attack = false;
+      tryAttack(PLAYER.comboIndex === 0 ? 'jab' : 'thrust');
+    }
+    if (INPUT_EDGE.heavy){ INPUT_EDGE.heavy = false; tryAttack('heavy'); }
+  }
+
+  // Camera rotation from deltas — disabled when locked-on (camera tracks target)
   const camSens = 0.0035;
-  CAM.yaw -= INPUT.cam.dx * camSens;
-  CAM.pitch = clamp(CAM.pitch + INPUT.cam.dy * camSens * 0.8, -0.35, 1.05);
+  if (!LOCK.active){
+    CAM.yaw -= INPUT.cam.dx * camSens;
+    CAM.pitch = clamp(CAM.pitch + INPUT.cam.dy * camSens * 0.8, -0.35, 1.05);
+  }
   INPUT.cam.dx = 0; INPUT.cam.dy = 0;
+
+  // When mounted, mount module drives position. Skip ground movement logic.
+  if (MOUNT.active) return;
+
+  // Dodge/attack lock out normal movement (dodge already drives velocity in updateCombat)
+  if (PLAYER.combatState === 'dodge') return;
 
   // Compute move direction relative to camera
   const mx = INPUT.move.x;
   const my = INPUT.move.y;
   const mlen = Math.hypot(mx, my);
-  // Camera-forward in the horizontal plane (camera looks toward player from yaw, so forward is opposite)
-  // Player should walk forward when stick goes up (my < 0).
   const camForward = new THREE.Vector3(-Math.sin(CAM.yaw), 0, -Math.cos(CAM.yaw)).normalize();
-  // Right = forward × up, written out for clarity (camForward.x = -sin, camForward.z = -cos).
   const camRight   = new THREE.Vector3(-camForward.z, 0, camForward.x).normalize();
 
   const moveDir = new THREE.Vector3();
@@ -927,25 +1910,41 @@ function updatePlayer(dt){
     moveDir.addScaledVector(camRight, mx);
     if (moveDir.lengthSq() > 0){
       moveDir.normalize();
-      // face direction (smooth)
-      const targetYaw = Math.atan2(moveDir.x, moveDir.z);
+      // Facing: locked-on = always face target; free = face movement
+      let targetYaw;
+      if (LOCK.active && LOCK.target){
+        targetYaw = Math.atan2(LOCK.target.pos.x - PLAYER.pos.x, LOCK.target.pos.z - PLAYER.pos.z);
+      } else {
+        targetYaw = Math.atan2(moveDir.x, moveDir.z);
+      }
       let dy = targetYaw - PLAYER.yaw;
       while (dy >  Math.PI) dy -= TAU;
       while (dy < -Math.PI) dy += TAU;
       PLAYER.yaw += dy * Math.min(1, dt * 12);
     }
+  } else if (LOCK.active && LOCK.target){
+    // Idle but locked-on — still face target
+    const ty = Math.atan2(LOCK.target.pos.x - PLAYER.pos.x, LOCK.target.pos.z - PLAYER.pos.z);
+    let dy = ty - PLAYER.yaw;
+    while (dy >  Math.PI) dy -= TAU;
+    while (dy < -Math.PI) dy += TAU;
+    PLAYER.yaw += dy * Math.min(1, dt * 8);
   }
 
   // Stamina-aware sprint
-  const wantSprint = INPUT.sprint && mlen > 0.2 && PLAYER.sp > 6;
+  const wantSprint = INPUT.sprint && mlen > 0.2 && PLAYER.sp > 6 && PLAYER.combatState === 'idle';
   if (wantSprint){ PLAYER.sp = Math.max(0, PLAYER.sp - dt * 22); PLAYER.sprinting = true; }
   else { PLAYER.sp = Math.min(PLAYER.spMax, PLAYER.sp + dt * 14); PLAYER.sprinting = false; }
 
-  const speed = PLAYER.sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
+  // Restrict speed during attack
+  let speedBase = PLAYER.sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
+  if (PLAYER.combatState === 'windup' || PLAYER.combatState === 'active') speedBase *= 0.25;
+  else if (PLAYER.combatState === 'recovery') speedBase *= 0.5;
+  // Scan mode slow-walk
+  if (SCAN.active) speedBase *= 0.4;
 
   // Horizontal velocity
-  const wantedV = moveDir.clone().multiplyScalar(speed * clamp(mlen, 0, 1));
-  // smooth ground accel
+  const wantedV = moveDir.clone().multiplyScalar(speedBase * clamp(mlen, 0, 1));
   const accel = PLAYER.onGround ? 18 : 5;
   PLAYER.vel.x = lerp(PLAYER.vel.x, wantedV.x, Math.min(1, dt * accel));
   PLAYER.vel.z = lerp(PLAYER.vel.z, wantedV.z, Math.min(1, dt * accel));
@@ -1113,15 +2112,84 @@ class Dino {
     this.scale = scale;
     // species-specific stats
     const profile = {
-      parasaur: { speed: 7.0, sprintSpeed: 12.5, fleeRadius: 22, alertRadius: 32, calm: 1.0, hp: 80,  diet:'herb',  size:1.0 },
-      raptor:   { speed: 6.0, sprintSpeed: 14.0, fleeRadius: 0,  alertRadius: 28, calm: 0.4, hp: 60,  diet:'carn',  size:0.8 },
-      trike:    { speed: 5.0, sprintSpeed: 10.0, fleeRadius: 0,  alertRadius: 18, calm: 0.7, hp: 180, diet:'herb',  size:1.3 },
+      parasaur: { speed: 7.0, sprintSpeed: 12.5, fleeRadius: 22, alertRadius: 32, calm: 1.0, hp:  80, diet:'herb', size:1.0, damage: 8,  xp: 24, hitReach: 2.0 },
+      raptor:   { speed: 6.0, sprintSpeed: 14.0, fleeRadius: 0,  alertRadius: 28, calm: 0.4, hp:  60, diet:'carn', size:0.8, damage: 14, xp: 38, hitReach: 2.0 },
+      trike:    { speed: 5.0, sprintSpeed: 10.0, fleeRadius: 0,  alertRadius: 18, calm: 0.7, hp: 180, diet:'herb', size:1.3, damage: 28, xp: 90, hitReach: 3.2 },
     }[species];
     this.profile = profile;
+    this.hpMax = profile.hp;
     this.hp = profile.hp;
+    this.level = 1 + Math.floor(scale > 1.1 ? 2 : 0);
+    this.dying = false;
+    this.dyingTimer = 0;
+    this.removed = false;
+    this.hitFlash = 0;
+    this.attackCD = 0;
+    // Stage III flags
+    this.tamed = false;
+    this.companion = false;
+    this.entry = null;          // roster entry once tamed
+    this.aggroIgnoresPlayer = false;
+    this.onGround = true;
     this.mesh.scale.multiplyScalar(profile.size);
+    // Cache original material colors so we can flash on hit
+    this._materialColors = [];
+    this.mesh.traverse(o => {
+      if (o.isMesh && o.material && o.material.color){
+        this._materialColors.push({ mat: o.material, base: o.material.color.clone() });
+      }
+    });
     scene.add(this.mesh);
     this.setState(DINO_STATES.IDLE);
+  }
+
+  takeDamage(amount, isCrit, fromForward){
+    if (this.dying) return;
+    this.hp -= amount;
+    this.hitFlash = 0.25;
+    spawnFloater((isCrit ? '✦ ' : '') + Math.ceil(amount), isCrit ? 'crit' : 'dmg',
+      new THREE.Vector3(this.pos.x, this.pos.y + this.profile.size * 2.4, this.pos.z));
+    if (!this.tamed){
+      // Aggro: even herbivores will flee fast; trikes charge.
+      if (this.profile.diet === 'carn' || this.species === 'trike'){
+        this.setState(DINO_STATES.CHARGE);
+      } else {
+        this.setState(DINO_STATES.FLEE);
+      }
+    }
+    // Knockback impulse
+    if (fromForward){
+      this.pos.x += fromForward.x * 0.3;
+      this.pos.z += fromForward.z * 0.3;
+    }
+    if (this.hp <= 0) this.die();
+  }
+
+  die(){
+    if (this.tamed){
+      // Companions don't die — they retreat to the Roost and full-heal there.
+      const name = (this.entry?.name || 'Companion').split(' ')[0];
+      showBanner(`${name} fled to the Roost`, 2200);
+      if (this.entry){
+        this.entry.hp = this.entry.hpMax;
+      }
+      if (COMPANION.dino === this) COMPANION.dino = null;
+      if (MOUNT.active === this) tryDismount();
+      this.remove();
+      return;
+    }
+    this.dying = true;
+    this.dyingTimer = 0;
+    gainXP(this.profile.xp + (this.level - 1) * 6);
+    spawnLoot(this.species, this.pos.x, this.pos.y, this.pos.z);
+    if (LOCK.target === this){ LOCK.target = null; LOCK.active = false; hideLockUI(); }
+    if (SCAN.target === this) SCAN.target = null;
+  }
+
+  remove(){
+    this.removed = true;
+    scene.remove(this.mesh);
+    this.mesh.traverse(o => { if (o.isMesh){ o.geometry?.dispose?.(); o.material?.dispose?.(); } });
   }
 
   setState(s){
@@ -1145,18 +2213,109 @@ class Dino {
     if (s === DINO_STATES.CHARGE)this.stateDuration = rand(2, 4);
   }
 
+  _animateLimbs(){
+    const sp = Math.hypot(this.vel.x, this.vel.z);
+    const t = performance.now() * 0.001;
+    const swing = Math.sin(t * (sp > 0.2 ? 6 + sp * 0.3 : 1.5)) * Math.min(1, sp * 0.12 + 0.05);
+    const pp = this.mesh.userData.parts;
+    if (pp){
+      if (pp.lFL) pp.lFL.rotation.x =  swing;
+      if (pp.lFR) pp.lFR.rotation.x = -swing;
+      if (pp.lBL) pp.lBL.rotation.x = -swing;
+      if (pp.lBR) pp.lBR.rotation.x =  swing;
+      if (pp.tail) pp.tail.rotation.z = Math.sin(t * 2) * 0.15;
+      if (pp.head) pp.head.rotation.y = Math.sin(t * 0.8 + this.pos.x) * 0.15;
+    }
+  }
+
+  _updateAsCompanion(dt, playerPos){
+    // Tamed-companion behavior. Engage LOCK.target if hostile, else follow player.
+    const target = (LOCK.target && !LOCK.target.tamed && !LOCK.target.dying) ? LOCK.target : null;
+    if (target){
+      const dx = target.pos.x - this.pos.x;
+      const dz = target.pos.z - this.pos.z;
+      const d = Math.hypot(dx, dz) || 1;
+      this.yaw = Math.atan2(dx, dz);
+      if (d > 2.5){
+        const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+        this.vel.x = fwd.x * this.profile.sprintSpeed;
+        this.vel.z = fwd.z * this.profile.sprintSpeed;
+      } else {
+        this.vel.x = 0; this.vel.z = 0;
+        this.attackCD -= dt;
+        if (this.attackCD <= 0){
+          target.takeDamage(this.profile.damage * M.compDmg() * 1.5, false, { x: dx/d, z: dz/d });
+          spawnHitSparks(target.pos.x, target.pos.y + 1.4, target.pos.z, false);
+          this.attackCD = 1.2;
+        }
+      }
+    } else {
+      const dx = playerPos.x - this.pos.x;
+      const dz = playerPos.z - this.pos.z;
+      const d = Math.hypot(dx, dz) || 1;
+      if (d > 5){
+        this.yaw = Math.atan2(dx, dz);
+        const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+        const speed = d > 12 ? this.profile.sprintSpeed : this.profile.speed * 0.8;
+        this.vel.x = fwd.x * speed;
+        this.vel.z = fwd.z * speed;
+      } else {
+        this.vel.x *= 0.85;
+        this.vel.z *= 0.85;
+      }
+    }
+    this.pos.addScaledVector(this.vel, dt);
+    const limit = WORLD.size - 6;
+    this.pos.x = clamp(this.pos.x, -limit, limit);
+    this.pos.z = clamp(this.pos.z, -limit, limit);
+    this.pos.y = heightAt(this.pos.x, this.pos.z);
+    this.mesh.position.copy(this.pos);
+    this.mesh.rotation.y = this.yaw;
+    if (this.entry){ this.entry.hp = this.hp; }
+    this._animateLimbs();
+  }
+
   update(dt, playerPos){
+    if (this.removed) return;
+    // Skip when ridden — MOUNT module drives transform externally.
+    if (MOUNT.active === this){ this._animateLimbs(); return; }
+    // Tamed companion override
+    if (this.tamed && this.companion){ this._updateAsCompanion(dt, playerPos); return; }
+
+    // Dying — sink + fade then despawn
+    if (this.dying){
+      this.dyingTimer += dt;
+      const t = Math.min(1, this.dyingTimer / 1.4);
+      this.mesh.position.y = this.pos.y - t * 1.2;
+      this.mesh.rotation.z = lerp(0, Math.PI * 0.5, smoothstep(0, 1, t));
+      for (const mc of this._materialColors){
+        if (mc.mat.transparent === undefined) mc.mat.transparent = true;
+        mc.mat.transparent = true;
+        mc.mat.opacity = 1 - t;
+      }
+      if (t >= 1) this.remove();
+      return;
+    }
+    this.attackCD = Math.max(0, this.attackCD - dt);
+    // Damage flash
+    if (this.hitFlash > 0){
+      this.hitFlash -= dt;
+      const k = Math.max(0, this.hitFlash / 0.25);
+      for (const mc of this._materialColors){
+        mc.mat.color.copy(mc.base).lerp(new THREE.Color(0xffffff), k);
+      }
+    }
+
     this.stateTimer += dt;
     const distToPlayer = this.pos.distanceTo(playerPos);
 
     // Perception checks
     const p = this.profile;
-    if (p.diet === 'herb' && this.state !== DINO_STATES.FLEE && distToPlayer < p.fleeRadius){
+    if (p.diet === 'herb' && this.state !== DINO_STATES.FLEE && this.state !== DINO_STATES.CHARGE && distToPlayer < p.fleeRadius){
       this.setState(DINO_STATES.FLEE);
     } else if (p.diet === 'carn' && this.state !== DINO_STATES.ALERT && this.state !== DINO_STATES.CHARGE && distToPlayer < p.alertRadius){
       this.setState(DINO_STATES.ALERT);
     } else if (this.species === 'trike' && this.state !== DINO_STATES.CHARGE && distToPlayer < p.alertRadius){
-      // Trike alerts then charges if you get close
       if (distToPlayer < 8) this.setState(DINO_STATES.CHARGE);
       else if (this.state !== DINO_STATES.ALERT) this.setState(DINO_STATES.ALERT);
     }
@@ -1219,6 +2378,11 @@ class Dino {
         const d = Math.hypot(dx, dz);
         targetDir.set(dx / d, 0, dz / d);
         speed = p.sprintSpeed;
+        // Contact damage when in melee range
+        if (d < p.hitReach * (0.5 + this.profile.size * 0.5) && this.attackCD <= 0){
+          damagePlayer(p.damage, this.pos);
+          this.attackCD = 1.2;
+        }
         if (this.stateTimer > this.stateDuration || distToPlayer > p.alertRadius * 1.5){
           this.setState(DINO_STATES.WANDER);
         }
@@ -1235,6 +2399,8 @@ class Dino {
       this.yaw += dy * Math.min(1, dt * 6);
     }
 
+    // Weakened dinos move slower so they're catchable for taming.
+    if (this.hp / this.hpMax < 0.30) speed *= 0.55;
     // Move
     const forward = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     this.vel.x = forward.x * speed;
@@ -1294,6 +2460,518 @@ function spawnDinos(){
   }
 }
 spawnDinos();
+initSparks();
+refreshInv();
+
+/* ---------- 10b. Stage III: Skills, Taming, Mount, Companion, Roost --- */
+
+/* Skill definitions — 3 branches × 4 nodes. */
+const SKILL_DEFS = {
+  hunter: [
+    { id:'dmg',   nm:'Razor Edge',     dx:'+10% melee damage per rank',  max:5 },
+    { id:'combo', nm:'Quickdraw',      dx:'-10% attack windup per rank', max:3 },
+    { id:'arc',   nm:'Wide Swing',     dx:'+15% hit arc per rank',       max:3 },
+    { id:'stam',  nm:'Endurance',      dx:'+10 max stamina per rank',    max:5 },
+  ],
+  beast: [
+    { id:'tame', nm:'Soft Whisper',    dx:'-15% taming time per rank',   max:5 },
+    { id:'comp', nm:'Pack Bond',       dx:'+15% companion damage per rank', max:5 },
+    { id:'mount',nm:'Saddle Up',       dx:'+10% mount speed per rank',   max:5 },
+    { id:'calm', nm:'Gentle Approach', dx:'+6% tame-ready HP per rank',  max:3 },
+  ],
+  surv: [
+    { id:'hp',     nm:'Hide Like Bark', dx:'+10 max vitality per rank',  max:5 },
+    { id:'pickup', nm:'Quick Hands',    dx:'+30% pickup range per rank', max:3 },
+    { id:'drop',   nm:'Sharp Eye',      dx:'+15% extra loot per rank',   max:5 },
+    { id:'fall',   nm:'Sure Footed',    dx:'-30% fall damage per rank',  max:3 },
+  ],
+};
+
+const SKILLS = {
+  points: 0,
+  hunter: { dmg:0, combo:0, arc:0, stam:0 },
+  beast:  { tame:0, comp:0, mount:0, calm:0 },
+  surv:   { hp:0, pickup:0, drop:0, fall:0 },
+};
+
+/* Derived multipliers — single source of truth used by combat/loot/ui. */
+const M = {
+  meleeDmg:     () => 1 + SKILLS.hunter.dmg * 0.10,
+  attackSpeed:  () => 1 - SKILLS.hunter.combo * 0.10,
+  hitArc:       () => 1 + SKILLS.hunter.arc * 0.15,
+  stamMax:      () => 100 + SKILLS.hunter.stam * 10,
+  hpMax:        () => 100 + SKILLS.surv.hp * 10,
+  tameTime:     () => 1 - SKILLS.beast.tame * 0.15,
+  compDmg:      () => 1 + SKILLS.beast.comp * 0.15,
+  mountSpd:     () => 1 + SKILLS.beast.mount * 0.10,
+  tameHpThresh: () => 0.30 + SKILLS.beast.calm * 0.06,
+  pickupR:      () => Math.sqrt(6) * (1 + SKILLS.surv.pickup * 0.30),
+  dropBonus:    () => 1 + SKILLS.surv.drop * 0.15,
+  fallMul:      () => 1 - SKILLS.surv.fall * 0.30,
+};
+
+function allocSkill(branch, id){
+  if (SKILLS.points <= 0) return;
+  const def = SKILL_DEFS[branch].find(d => d.id === id);
+  if (!def) return;
+  if (SKILLS[branch][id] >= def.max) return;
+  SKILLS[branch][id]++;
+  SKILLS.points--;
+  // Reflect changed caps onto player
+  PLAYER.spMax = M.stamMax();
+  PLAYER.hpMax = M.hpMax();
+  PLAYER.sp = Math.min(PLAYER.sp, PLAYER.spMax);
+  PLAYER.hp = Math.min(PLAYER.hp, PLAYER.hpMax);
+  refreshSkillUI();
+  saveGame();
+}
+
+/* === ROOST ============================================================ */
+const ROOST = {
+  pos: new THREE.Vector3(0, 0, 12),
+  range: 7,
+  mesh: null,
+  tamedDinos: [], // serialised entries
+};
+
+function makeRoostMesh(){
+  const g = new THREE.Group();
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 0.6, 12), toonMat(0x6e4a30, {flatShading:true}));
+  plat.position.y = 0.3; plat.castShadow = true; plat.receiveShadow = true; g.add(plat);
+  // Rim accent
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(4, 0.16, 6, 18), toonMat(0x7cf2c8, {flatShading:true}));
+  rim.position.y = 0.62; rim.rotation.x = Math.PI / 2; g.add(rim);
+  // Totem
+  const totem = new THREE.Mesh(new THREE.BoxGeometry(0.9, 4.4, 0.9), toonMat(0x3a2820, {flatShading:true}));
+  totem.position.y = 2.8; totem.castShadow = true; g.add(totem);
+  // Carved face
+  const eye  = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), toonMat(0xffae50, {flatShading:true}));
+  eye.position.set( 0.25, 3.6, 0.46); g.add(eye);
+  const eye2 = eye.clone(); eye2.position.x = -0.25; g.add(eye2);
+  const mouth= new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.10, 0.05), toonMat(0xffae50, {flatShading:true}));
+  mouth.position.set(0, 3.0, 0.47); g.add(mouth);
+  // Crown
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(0.8, 0.8, 4), toonMat(0xb3c0c8, {flatShading:true}));
+  crown.position.set(0, 5.3, 0); crown.castShadow = true; g.add(crown);
+  // Torch ring
+  const torchGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.4, 6);
+  const torchMat = toonMat(0x4a3020, {flatShading:true});
+  const fires = [];
+  for (let i = 0; i < 4; i++){
+    const a = (i / 4) * TAU + Math.PI / 4;
+    const t = new THREE.Mesh(torchGeo, torchMat);
+    t.position.set(Math.cos(a) * 3.2, 1.3, Math.sin(a) * 3.2); g.add(t);
+    const fire = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.32, 0),
+      new THREE.MeshBasicMaterial({ color:0xffae50, transparent:true, opacity:0.9, depthWrite:false })
+    );
+    fire.position.set(Math.cos(a) * 3.2, 2.2, Math.sin(a) * 3.2); g.add(fire);
+    fires.push(fire);
+  }
+  g.userData.fires = fires;
+  return g;
+}
+
+function spawnRoost(){
+  ROOST.mesh = makeRoostMesh();
+  ROOST.pos.y = heightAt(ROOST.pos.x, ROOST.pos.z);
+  ROOST.mesh.position.copy(ROOST.pos);
+  scene.add(ROOST.mesh);
+}
+function updateRoost(dt){
+  if (!ROOST.mesh) return;
+  const t = performance.now() * 0.002;
+  const fires = ROOST.mesh.userData.fires;
+  if (fires){
+    for (let i = 0; i < fires.length; i++){
+      fires[i].scale.y = 0.8 + Math.sin(t * 3 + i * 1.3) * 0.25;
+      fires[i].scale.x = fires[i].scale.z = 0.9 + Math.sin(t * 4 + i) * 0.1;
+      fires[i].rotation.y = t * 2;
+    }
+  }
+}
+
+/* === COMPANION ======================================================== */
+const COMPANION = { dino: null };
+
+function summonCompanion(entry){
+  // Remove existing
+  if (COMPANION.dino && !COMPANION.dino.removed){
+    COMPANION.dino.remove();
+    const i = dinos.indexOf(COMPANION.dino); if (i >= 0) dinos.splice(i, 1);
+    COMPANION.dino = null;
+  }
+  const dino = new Dino(entry.species, PLAYER.pos.x + 4, PLAYER.pos.z + 4, 1.0);
+  dino.tamed = true;
+  dino.companion = true;
+  dino.aggroIgnoresPlayer = true;
+  dino.entry = entry;
+  dino.hpMax = entry.hpMax;
+  dino.hp = entry.hp;
+  dino.level = entry.level || 1;
+  dinos.push(dino);
+  COMPANION.dino = dino;
+}
+
+/* === TAMING =========================================================== */
+const TAMING = {
+  target: null,
+  progress: 0,  // 0..1
+  range: 4,
+};
+
+function updateTaming(dt){
+  let target = null;
+  if (!MOUNT.active && PLAYER.combatState === 'idle'){
+    for (const d of dinos){
+      if (d.tamed || d.dying) continue;
+      if ((d.hp / d.hpMax) > M.tameHpThresh()) continue;
+      const dist = d.pos.distanceTo(PLAYER.pos);
+      if (dist <= TAMING.range && (!target || dist < target.pos.distanceTo(PLAYER.pos))){
+        target = d;
+      }
+    }
+  }
+  if (target !== TAMING.target){
+    TAMING.target = target;
+    TAMING.progress = 0;
+  }
+  if (target){
+    if (INPUT.action){
+      TAMING.progress += dt / (4.0 * M.tameTime());
+      if (TAMING.progress >= 1){
+        completeTame(target);
+        TAMING.progress = 0; TAMING.target = null;
+      }
+    } else {
+      TAMING.progress = Math.max(0, TAMING.progress - dt * 0.5);
+    }
+    positionTameRing(target);
+    $tameRing.classList.add('show');
+    const dash = 276.46;
+    $tameRing.querySelector('.fg').style.strokeDashoffset = (dash * (1 - TAMING.progress)) + '';
+  } else {
+    $tameRing.classList.remove('show');
+  }
+}
+
+const DINO_FIRST = ['Bramble','Ember','Frost','Thistle','Onyx','Sable','Shrike','Quill','Rune','Mossback','Pebble','Driftwood','Cinder','Echo'];
+function dinoName(species){
+  return pick(DINO_FIRST) + ' the ' + (DINODEX[species]?.name || species);
+}
+
+function completeTame(d){
+  d.tamed = true;
+  d.aggroIgnoresPlayer = true;
+  const entry = {
+    species: d.species,
+    name: dinoName(d.species),
+    level: d.level,
+    hp: d.hpMax,
+    hpMax: d.hpMax,
+  };
+  ROOST.tamedDinos.push(entry);
+  spawnFloater(`Tamed · ${entry.name.split(' ')[0]}`, 'pickup',
+    new THREE.Vector3(d.pos.x, d.pos.y + d.profile.size * 2.4, d.pos.z));
+  showBanner(`Tamed ${DINODEX[d.species]?.name || d.species}`, 2200);
+  // Remove the wild dino (it's now stabled at Roost)
+  d.remove();
+  // Set as active if no current companion
+  if (!COMPANION.dino || COMPANION.dino.removed) summonCompanion(entry);
+  saveGame();
+}
+
+function positionTameRing(d){
+  _vTmp.copy(d.pos); _vTmp.y += d.profile.size * 1.8;
+  _vTmp.project(camera);
+  if (_vTmp.z >= 1){ $tameRing.classList.remove('show'); return; }
+  const x = (_vTmp.x * 0.5 + 0.5) * innerWidth;
+  const y = (-_vTmp.y * 0.5 + 0.5) * innerHeight;
+  $tameRing.style.left = x + 'px';
+  $tameRing.style.top  = y + 'px';
+}
+
+/* === MOUNT ============================================================ */
+const MOUNT = {
+  active: null,
+  stamina: 100, staminaMax: 100,
+};
+
+function tryMount(d){
+  if (!d || !d.tamed || MOUNT.active) return false;
+  MOUNT.active = d;
+  MOUNT.stamina = MOUNT.staminaMax = 100 + d.hpMax * 0.5;
+  // Attach player mesh to dino back so transforms follow
+  d.mesh.add(playerMesh);
+  playerMesh.position.set(0, d.profile.size * 1.6 + 0.5, 0.2);
+  playerMesh.rotation.set(0, 0, 0);
+  const parts = playerMesh.userData.parts;
+  parts.weapon.visible = false;
+  parts.sheath.visible = true;
+  if (LOCK.active){ LOCK.active = false; LOCK.target = null; hideLockUI(); }
+  showBanner(`Mounted · ${DINODEX[d.species]?.name || d.species}`, 1600);
+  return true;
+}
+function tryDismount(){
+  const d = MOUNT.active;
+  if (!d) return;
+  scene.attach(playerMesh); // detach but preserve world transform
+  PLAYER.pos.set(d.pos.x + 2.5, d.pos.y + 1, d.pos.z);
+  PLAYER.yaw = d.yaw;
+  PLAYER.vel.set(0, 0, 0);
+  playerMesh.position.copy(PLAYER.pos);
+  playerMesh.rotation.set(0, PLAYER.yaw, 0);
+  MOUNT.active = null;
+  $mountBar.classList.remove('show');
+}
+
+function updateMount(dt){
+  const d = MOUNT.active;
+  if (!d){ $mountBar.classList.remove('show'); return; }
+  if (d.dying || d.removed){ tryDismount(); return; }
+
+  // Drive yaw from move-relative-to-camera
+  const mx = INPUT.move.x, my = INPUT.move.y;
+  const camForward = new THREE.Vector3(-Math.sin(CAM.yaw), 0, -Math.cos(CAM.yaw)).normalize();
+  const camRight   = new THREE.Vector3(-camForward.z, 0, camForward.x).normalize();
+  const moveDir = new THREE.Vector3();
+  moveDir.addScaledVector(camForward, -my);
+  moveDir.addScaledVector(camRight, mx);
+  const mlen = moveDir.length();
+  if (mlen > 0.05){
+    moveDir.divideScalar(mlen);
+    const ty = Math.atan2(moveDir.x, moveDir.z);
+    let dy = ty - d.yaw;
+    while (dy >  Math.PI) dy -= TAU;
+    while (dy < -Math.PI) dy += TAU;
+    d.yaw += dy * Math.min(1, dt * 6);
+  }
+  // Speed: sprint while button held & stamina available
+  const sprintNow = INPUT.sprint && MOUNT.stamina > 5 && mlen > 0.2;
+  const base   = d.profile.speed;
+  const sprint = d.profile.sprintSpeed;
+  const speed = (sprintNow ? sprint : base) * M.mountSpd();
+  if (sprintNow) MOUNT.stamina = Math.max(0, MOUNT.stamina - dt * 14);
+  else MOUNT.stamina = Math.min(MOUNT.staminaMax, MOUNT.stamina + dt * 8);
+  const fwd = new THREE.Vector3(Math.sin(d.yaw), 0, Math.cos(d.yaw));
+  d.vel.x = fwd.x * speed * Math.min(1, mlen);
+  d.vel.z = fwd.z * speed * Math.min(1, mlen);
+
+  // Special: trike ram on HEAVY
+  if (INPUT_EDGE.heavy){
+    INPUT_EDGE.heavy = false;
+    if (d.species === 'trike'){
+      for (const other of dinos){
+        if (other === d || other.tamed || other.dying) continue;
+        const ox = other.pos.x - d.pos.x;
+        const oz = other.pos.z - d.pos.z;
+        const od = Math.hypot(ox, oz) || 1;
+        if (od > 6) continue;
+        const dot = (ox/od) * fwd.x + (oz/od) * fwd.z;
+        if (dot < 0.55) continue;
+        other.takeDamage(85 * M.meleeDmg(), true, fwd);
+        spawnHitSparks(other.pos.x, other.pos.y + 1.5, other.pos.z, true);
+      }
+      addScreenShake(0.55);
+    }
+  }
+  // Jump
+  if (INPUT.jumpPressed && d.onGround){
+    d.vel.y = 12;
+    INPUT.jumpPressed = false;
+    d.onGround = false;
+  }
+  d.vel.y = (d.vel.y || 0) - 32 * dt;
+  d.pos.addScaledVector(d.vel, dt);
+  const limit = WORLD.size - 6;
+  d.pos.x = clamp(d.pos.x, -limit, limit);
+  d.pos.z = clamp(d.pos.z, -limit, limit);
+  const ground = heightAt(d.pos.x, d.pos.z);
+  if (d.pos.y < ground){ d.pos.y = ground; d.vel.y = 0; d.onGround = true; }
+  else d.onGround = false;
+  d.mesh.position.copy(d.pos);
+  d.mesh.rotation.y = d.yaw;
+  d._animateLimbs();
+
+  // Camera follows the dino — keep player coords in sync for camera target
+  PLAYER.pos.copy(d.pos);
+
+  // HUD
+  $mountBar.classList.add('show');
+  $mountBar.querySelector('.nm').textContent = (d.entry?.name || DINODEX[d.species]?.name || d.species).toUpperCase();
+  $mountBar.querySelector('.stm i').style.width = (MOUNT.stamina / MOUNT.staminaMax * 100) + '%';
+
+  // Dismount with dodge button
+  if (INPUT_EDGE.dodge){ INPUT_EDGE.dodge = false; tryDismount(); }
+}
+
+/* === Companion HUD ==================================================== */
+function updateCompanionUI(){
+  const c = COMPANION.dino;
+  if (!c || c.removed){ $compBar.classList.remove('show'); return; }
+  $compBar.classList.add('show');
+  $compBar.querySelector('.nm').textContent = (c.entry?.name || 'Companion').toUpperCase().split(' ')[0] + ` · LV ${c.level}`;
+  $compBar.querySelector('.bar i').style.width = (c.hp / c.hpMax * 100) + '%';
+}
+
+/* === Context prompt and ACT edge handling ============================ */
+let lastActionHeld = false;
+function handleActionEdge(){
+  const held = !!INPUT.action;
+  // Detect tap edge (transition from not-held to held)
+  if (held && !lastActionHeld){
+    if (!MOUNT.active){
+      // Priority: mount > roost > (tame is hold, not tap)
+      let mountable = null;
+      for (const d of dinos){
+        if (!d.tamed || !d.companion || d.dying) continue;
+        if (d.pos.distanceTo(PLAYER.pos) < 4){ mountable = d; break; }
+      }
+      if (mountable){ tryMount(mountable); }
+      else if (PLAYER.pos.distanceTo(ROOST.pos) < ROOST.range){ openRoostMenu(); }
+    }
+  }
+  lastActionHeld = held;
+}
+
+function updateContextPrompt(){
+  if (anyModalOpen()){ $ctxPrompt.classList.remove('show'); return; }
+  let mode = null, label = null, key = isTouch ? 'ACT' : 'E';
+  if (MOUNT.active){
+    mode = 'mount';
+    label = 'Dismount';
+    key = isTouch ? '◇' : 'F';
+  } else {
+    let mountable = null, tameable = null;
+    for (const d of dinos){
+      if (d.dying) continue;
+      const dist = d.pos.distanceTo(PLAYER.pos);
+      if (d.tamed && d.companion && dist < 4){
+        if (!mountable || dist < mountable.pos.distanceTo(PLAYER.pos)) mountable = d;
+      }
+      if (!d.tamed && (d.hp / d.hpMax) <= M.tameHpThresh() && dist < TAMING.range){
+        if (!tameable || dist < tameable.pos.distanceTo(PLAYER.pos)) tameable = d;
+      }
+    }
+    if (mountable){ mode = 'mount'; label = 'Mount'; }
+    else if (tameable){ mode = 'tame'; label = 'Hold to Tame'; }
+    else if (PLAYER.pos.distanceTo(ROOST.pos) < ROOST.range){ mode = 'roost'; label = 'Open Roost'; }
+  }
+  if (label){
+    $ctxPrompt.classList.add('show');
+    $ctxPrompt.className = 'show ' + (mode || '');
+    $ctxPrompt.innerHTML = `<span class="key">${key}</span><span>${label}</span>`;
+  } else {
+    $ctxPrompt.classList.remove('show');
+  }
+}
+
+/* === Modals =========================================================== */
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModals(){
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('show'));
+  const cl = document.getElementById('comp-list'); if (cl) cl.style.display = 'none';
+}
+function anyModalOpen(){
+  return !!document.querySelector('.modal.show');
+}
+document.querySelectorAll('[data-modal-close]').forEach(el => el.addEventListener('click', closeModals));
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModals(); });
+});
+
+function openRoostMenu(){ openModal('modal-roost'); }
+document.querySelectorAll('[data-roost]').forEach(el => {
+  el.addEventListener('click', () => {
+    const act = el.dataset.roost;
+    if (act === 'rest'){
+      PLAYER.hp = PLAYER.hpMax; PLAYER.sp = PLAYER.spMax;
+      TIME.t = 0.05; TIME.day += 1;
+      if (COMPANION.dino && !COMPANION.dino.removed){
+        COMPANION.dino.hp = COMPANION.dino.hpMax;
+        if (COMPANION.dino.entry) COMPANION.dino.entry.hp = COMPANION.dino.hpMax;
+      }
+      closeModals();
+      showBanner('You rested · dawn breaks', 2200);
+    } else if (act === 'skills'){
+      closeModals();
+      refreshSkillUI();
+      openModal('modal-skills');
+    } else if (act === 'companions'){
+      const list = document.getElementById('comp-list');
+      list.style.display = 'flex';
+      list.innerHTML = '';
+      if (ROOST.tamedDinos.length === 0){
+        list.innerHTML = '<div style="font-size:11px;letter-spacing:.2em;opacity:.6;text-align:center;padding:20px;">No tamed beasts yet. Weaken &amp; tame a wild dino.</div>';
+        return;
+      }
+      ROOST.tamedDinos.forEach((entry, idx) => {
+        const c = (DINODEX[entry.species]?.color || 0x7cf2c8).toString(16).padStart(6, '0');
+        const isActive = COMPANION.dino?.entry === entry;
+        const item = document.createElement('div');
+        item.className = 'comp-item' + (isActive ? ' active' : '');
+        item.innerHTML = `<div class="ico" style="background:#${c};"></div>
+          <div class="nm">${entry.name} · LV ${entry.level}</div>
+          <button data-pick="${idx}">${isActive ? 'ACTIVE' : 'SUMMON'}</button>`;
+        list.appendChild(item);
+      });
+      list.querySelectorAll('[data-pick]').forEach(b => {
+        b.addEventListener('click', () => {
+          const idx = parseInt(b.dataset.pick);
+          const entry = ROOST.tamedDinos[idx];
+          summonCompanion(entry);
+          closeModals();
+          showBanner(`Summoned · ${entry.name.split(' ')[0]}`, 1800);
+          saveGame();
+        });
+      });
+    } else if (act === 'leave'){
+      closeModals();
+    }
+  });
+});
+
+/* Populate skill panel — call when opened or after spending a point. */
+function refreshSkillUI(){
+  const sp = document.getElementById('sp-count');
+  if (sp) sp.textContent = SKILLS.points;
+  for (const branch of ['hunter','beast','surv']){
+    const col = document.querySelector(`[data-skill-col="${branch}"]`);
+    if (!col) continue;
+    col.innerHTML = '';
+    for (const def of SKILL_DEFS[branch]){
+      const rank = SKILLS[branch][def.id];
+      const node = document.createElement('div');
+      node.className = 'skill-node' + (rank >= def.max ? ' maxed' : '');
+      node.innerHTML = `<span class="lv">${rank}/${def.max}</span><div class="nm">${def.nm}</div><div class="desc">${def.dx}</div>`;
+      if (rank < def.max && SKILLS.points > 0){
+        node.addEventListener('click', () => allocSkill(branch, def.id));
+      } else {
+        node.style.opacity = rank >= def.max ? '.65' : '.55';
+        node.style.cursor = rank >= def.max ? 'default' : 'not-allowed';
+      }
+      col.appendChild(node);
+    }
+  }
+}
+
+/* M / Tab(when no lock) opens skills */
+addEventListener('keydown', e => {
+  if (e.code === 'KeyM'){ refreshSkillUI(); openModal('modal-skills'); }
+  if (e.code === 'Escape') closeModals();
+});
+
+/* Save wrapper exposed so completeTame / allocSkill can call it. */
+function saveGame(){ try { save(); } catch(_){} }
+
+/* Cached DOM refs */
+const $tameRing  = document.getElementById('tame-ring');
+const $compBar   = document.getElementById('comp-bar');
+const $mountBar  = document.getElementById('mount-bar');
+const $ctxPrompt = document.getElementById('ctx-prompt');
+
+spawnRoost();
+refreshSkillUI();
 
 /* ---------- 11. Day/night cycle --------------------------------------- */
 
@@ -1426,14 +3104,22 @@ function drawMinimap(){
 
 /* ---------- 13. Save / load (minimal Stage 1) ------------------------- */
 
-const SAVE_KEY = 'saurian.stage1.v1';
+const SAVE_KEY = 'saurian.stage3.v1';
 function save(){
   try {
+    const activeIdx = (typeof ROOST !== 'undefined' && COMPANION.dino?.entry)
+      ? ROOST.tamedDinos.indexOf(COMPANION.dino.entry) : -1;
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       pos: PLAYER.pos.toArray(),
       yaw: PLAYER.yaw,
       hp: PLAYER.hp, sp: PLAYER.sp,
+      hpMax: PLAYER.hpMax, spMax: PLAYER.spMax,
+      level: PLAYER.level, xp: PLAYER.xp, xpNext: PLAYER.xpNext,
+      inv: { bone: INVENTORY.bone, hide: INVENTORY.hide, meat: INVENTORY.meat },
       time: TIME.t, day: TIME.day,
+      skills: (typeof SKILLS !== 'undefined') ? SKILLS : null,
+      tamed:  (typeof ROOST !== 'undefined') ? ROOST.tamedDinos : [],
+      activeIdx,
     }));
   } catch(_){}
 }
@@ -1444,10 +3130,34 @@ function load(){
     const s = JSON.parse(raw);
     if (Array.isArray(s.pos)) PLAYER.pos.fromArray(s.pos);
     if (typeof s.yaw === 'number') PLAYER.yaw = s.yaw;
+    if (typeof s.hpMax === 'number') PLAYER.hpMax = s.hpMax;
+    if (typeof s.spMax === 'number') PLAYER.spMax = s.spMax;
     if (typeof s.hp === 'number')  PLAYER.hp = s.hp;
     if (typeof s.sp === 'number')  PLAYER.sp = s.sp;
+    if (typeof s.level === 'number') PLAYER.level = s.level;
+    if (typeof s.xp === 'number')    PLAYER.xp = s.xp;
+    if (typeof s.xpNext === 'number')PLAYER.xpNext = s.xpNext;
+    if (s.inv){ INVENTORY.bone = s.inv.bone|0; INVENTORY.hide = s.inv.hide|0; INVENTORY.meat = s.inv.meat|0; }
     if (typeof s.time === 'number') TIME.t = s.time;
     if (typeof s.day === 'number')  TIME.day = s.day;
+    if (s.skills && typeof SKILLS !== 'undefined'){
+      SKILLS.points = s.skills.points | 0;
+      for (const branch of ['hunter','beast','surv']){
+        if (s.skills[branch]) Object.assign(SKILLS[branch], s.skills[branch]);
+      }
+      // Re-apply caps from skills
+      PLAYER.hpMax = M.hpMax();
+      PLAYER.spMax = M.stamMax();
+      PLAYER.hp = Math.min(PLAYER.hp, PLAYER.hpMax);
+      PLAYER.sp = Math.min(PLAYER.sp, PLAYER.spMax);
+    }
+    if (Array.isArray(s.tamed) && typeof ROOST !== 'undefined'){
+      ROOST.tamedDinos = s.tamed;
+      if (typeof s.activeIdx === 'number' && s.activeIdx >= 0 && s.activeIdx < s.tamed.length){
+        // Defer summoning to the next tick so scene + dinos array is ready
+        setTimeout(() => summonCompanion(s.tamed[s.activeIdx]), 0);
+      }
+    }
   } catch(_){}
 }
 load();
@@ -1461,14 +3171,33 @@ let started = false;
 
 function loop(now){
   requestAnimationFrame(loop);
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const dtRaw = Math.min(0.05, (now - last) / 1000);
   last = now;
 
   if (started){
+    // Pause world time fully while a modal is open
+    const paused = anyModalOpen();
+    const timeScale = paused ? 0 : lerp(1, 0.25, SCAN.fadeIn);
+    const dt = dtRaw * timeScale;
+
+    handleActionEdge();
     updatePlayer(dt);
+    updateMount(dt);
+    updateCombat(dt);
+    updateTaming(dtRaw);
+    updateLockOn(dt);
+    updateScan(dtRaw); // scan reads real input, not slowed
     for (const d of dinos) d.update(dt, PLAYER.pos);
+    for (let i = dinos.length - 1; i >= 0; i--){
+      if (dinos[i].removed) dinos.splice(i, 1);
+    }
+    updateLoot(dt);
+    updateSparks(dt);
+    updateRoost(dt);
+    updateCompanionUI();
+    updateContextPrompt();
     updateTime(dt);
-    updateCamera(dt);
+    updateCamera(dtRaw);
 
     // perf: cull distant dinos visibility
     for (const d of dinos){
@@ -1477,10 +3206,13 @@ function loop(now){
     }
     updateHUD();
   } else {
-    // Slowly pan the camera during boot so it isn't a static black-edged frame.
-    CAM.yaw += dt * 0.05;
-    updateCamera(dt);
+    CAM.yaw += dtRaw * 0.05;
+    updateCamera(dtRaw);
   }
+
+  // Apply screen shake offset just before rendering
+  const sh = applyShake(dtRaw);
+  camera.position.add(sh);
 
   renderer.render(scene, camera);
 }
@@ -1505,8 +3237,8 @@ const steps = [
   'shaping the continents...',
   'planting the leafgrove...',
   'breeding the parasaurs...',
-  'feeding the raptors...',
-  'lighting the sun...',
+  'whetting the spear...',
+  'tuning the hunter sense...',
   'awakening the wilds...'
 ];
 let stepIdx = 0;
@@ -1529,8 +3261,8 @@ bootStart.addEventListener('click', () => {
   boot.style.opacity = '0';
   boot.style.pointerEvents = 'none';
   setTimeout(() => boot.classList.add('hidden'), 800);
-  // Run one frame immediately so we're not stuck on dt=0
   last = performance.now();
+  setTimeout(() => showBanner('weaken · tame · ride', 2400), 900);
 });
 
 })();
