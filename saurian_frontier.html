@@ -444,7 +444,7 @@
 <!-- Boot screen -->
 <div id="boot">
   <h1>SAURIAN FRONTIER</h1>
-  <div class="sub">Stage IV · The Full Wilds</div>
+  <div class="sub">Stage V · Realism Polish</div>
   <div class="bar"><div class="fill" id="boot-fill"></div></div>
   <div class="tag" id="boot-status">awakening the prehistoric...</div>
   <button id="boot-start">Enter the Wilds</button>
@@ -462,10 +462,11 @@
   <div id="biome-banner">Greenleaf Plains</div>
   <div id="minimap"><canvas id="minimap-canvas" width="240" height="240"></canvas></div>
   <div id="help">
-    <b style="color:var(--accent);letter-spacing:.2em;">Stage IV</b><br/>
+    <b style="color:var(--accent);letter-spacing:.2em;">Stage V</b><br/>
     WASD · Shift · Space · F dodge<br/>
     J light · K heavy · L lock · Q scan<br/>
-    E interact · M skills · B dex · P photo
+    E interact · M skills · B dex · P photo<br/>
+    O settings · F1 colliders
   </div>
 
   <div id="target-bar">
@@ -539,6 +540,10 @@
       <div class="opt" data-roost="photo">
         <div class="nm">Photo Mode</div>
         <div class="desc">Pause time and save a PNG.</div>
+      </div>
+      <div class="opt" data-roost="settings">
+        <div class="nm">Settings</div>
+        <div class="desc">Quality preset &amp; perf toggles.</div>
       </div>
       <div class="opt" data-roost="leave">
         <div class="nm">Step Back Out</div>
@@ -975,6 +980,57 @@ const LEAF_GEO = new THREE.ConeGeometry(2.4, 5, 7);
 LEAF_GEO.translate(0, 5.5, 0);
 const trunkMat = toonMat(0x5b3a25, { flatShading: true });
 
+/* ---- Spatial collider grid (Stage V) -----------------------------------
+   Static-world colliders (tree trunks, rocks) bucket into 24-unit cells so
+   per-frame queries only sample the player's 3x3 neighbourhood. */
+const STATIC_GRID = new Map();
+const STATIC_CELL = 24;
+function _gridKey(x, z){ return (Math.floor(x / STATIC_CELL)) + '|' + (Math.floor(z / STATIC_CELL)); }
+function addStaticCollider(c){
+  const k = _gridKey(c.x, c.z);
+  let list = STATIC_GRID.get(k);
+  if (!list){ list = []; STATIC_GRID.set(k, list); }
+  list.push(c);
+}
+function nearbyStaticColliders(x, z, out){
+  out.length = 0;
+  const cx = Math.floor(x / STATIC_CELL);
+  const cz = Math.floor(z / STATIC_CELL);
+  for (let dx = -1; dx <= 1; dx++)
+    for (let dz = -1; dz <= 1; dz++){
+      const list = STATIC_GRID.get((cx + dx) + '|' + (cz + dz));
+      if (list) for (let i = 0; i < list.length; i++) out.push(list[i]);
+    }
+}
+const _nearTmp = [];
+
+/* Resolve sphere/cylinder collisions for a moving point against the grid.
+   Mutates pos and (optionally) vel — cancelling motion into walls. */
+function resolveStaticCollisions(pos, vel, radius, skin = 0.02){
+  nearbyStaticColliders(pos.x, pos.z, _nearTmp);
+  for (let i = 0; i < _nearTmp.length; i++){
+    const c = _nearTmp[i];
+    const dx = pos.x - c.x;
+    const dz = pos.z - c.z;
+    const sumR = radius + c.r + skin;
+    const dSq = dx*dx + dz*dz;
+    if (dSq < sumR * sumR && dSq > 1e-6){
+      const d = Math.sqrt(dSq);
+      const push = (sumR - d);
+      const nx = dx / d, nz = dz / d;
+      pos.x += nx * push;
+      pos.z += nz * push;
+      if (vel){
+        const into = -(vel.x * nx + vel.z * nz);
+        if (into > 0){
+          vel.x += nx * into;
+          vel.z += nz * into;
+        }
+      }
+    }
+  }
+}
+
 function spawnFoliage(){
   const total = 1400;
   const rng = mulberry32(WORLD.seed + 7);
@@ -1005,9 +1061,12 @@ function spawnFoliage(){
       dummy.updateMatrix();
       trunkIM.setMatrixAt(i, dummy.matrix);
       leafIM.setMatrixAt(i, dummy.matrix);
+      // Trunk cylinder collider — only blocks XZ movement, leaves are clear.
+      addStaticCollider({ x: it.x, z: it.z, r: 0.55 * it.scale, kind: 'tree' });
     }
     trunkIM.castShadow = true;
     leafIM.castShadow = true;
+    leafIM.userData.tag = 'leaves';
     scene.add(trunkIM);
     scene.add(leafIM);
   }
@@ -1033,9 +1092,12 @@ function spawnRocks(){
     if (h < -2) continue;
     dummy.position.set(x, h - 0.2, z);
     dummy.rotation.set(rng() * TAU, rng() * TAU, rng() * TAU);
-    dummy.scale.setScalar(0.6 + rng() * 2.2);
+    const s = 0.6 + rng() * 2.2;
+    dummy.scale.setScalar(s);
     dummy.updateMatrix();
     im.setMatrixAt(n++, dummy.matrix);
+    // Sphere collider for the rock — only large ones get one (small pebbles don't block).
+    if (s > 0.9) addStaticCollider({ x, z, r: s * 1.0, kind: 'rock' });
   }
   im.count = n;
   im.castShadow = true; im.receiveShadow = true;
@@ -2098,9 +2160,39 @@ function updatePlayer(dt){
   PLAYER.pos.x = clamp(PLAYER.pos.x, -limit, limit);
   PLAYER.pos.z = clamp(PLAYER.pos.z, -limit, limit);
 
-  // Ground collision (terrain heightmap)
+  // Static collider resolution (trees, rocks, roost totem)
+  resolveStaticCollisions(PLAYER.pos, PLAYER.vel, PLAYER.radius);
+
+  // Push out of nearby dinos so herds don't get clipped through. Big dinos
+  // weight higher, so the player is the one nudged.
+  for (let i = 0; i < dinos.length; i++){
+    const d = dinos[i];
+    if (d.dying || d === MOUNT.active) continue;
+    const dx = PLAYER.pos.x - d.pos.x;
+    const dz = PLAYER.pos.z - d.pos.z;
+    const dSq = dx*dx + dz*dz;
+    const sumR = PLAYER.radius + d.profile.size * 0.8;
+    if (dSq < sumR * sumR && dSq > 1e-4){
+      const dist = Math.sqrt(dSq);
+      const push = sumR - dist;
+      const massK = d.profile.size > 1.4 ? 1.0 : 0.85; // big dinos win
+      PLAYER.pos.x += (dx / dist) * push * massK;
+      PLAYER.pos.z += (dz / dist) * push * massK;
+    }
+  }
+
+  // Ground collision (terrain heightmap) — with slope handling.
   const groundY = heightAt(PLAYER.pos.x, PLAYER.pos.z);
+  const stepEps = 0.4;          // max ledge we'll snap over
+  const groundSnap = 0.6;       // when grounded, snap up to this much downhill
   if (PLAYER.pos.y < groundY){
+    // If we're below ground and the rise is shallow, treat as step-up.
+    const prevY = PLAYER.pos.y;
+    PLAYER.pos.y = groundY;
+    if (PLAYER.vel.y < 0) PLAYER.vel.y = 0;
+    PLAYER.onGround = true;
+  } else if (PLAYER.onGround && PLAYER.pos.y - groundY < groundSnap && PLAYER.vel.y <= 0){
+    // Stick to slopes when going downhill — stops the player bouncing on bumps.
     PLAYER.pos.y = groundY;
     PLAYER.vel.y = 0;
     PLAYER.onGround = true;
@@ -2108,6 +2200,23 @@ function updatePlayer(dt){
     PLAYER.onGround = true;
   } else {
     PLAYER.onGround = false;
+  }
+  // Slope-too-steep slide: sample local normal, push downhill if past walkable.
+  if (PLAYER.onGround){
+    const eps = 1.2;
+    const hl = heightAt(PLAYER.pos.x - eps, PLAYER.pos.z);
+    const hr = heightAt(PLAYER.pos.x + eps, PLAYER.pos.z);
+    const hb = heightAt(PLAYER.pos.x, PLAYER.pos.z - eps);
+    const hf = heightAt(PLAYER.pos.x, PLAYER.pos.z + eps);
+    // gradient: positive = higher on negative side, so this vector points downhill.
+    const dxh = (hl - hr) / (2 * eps);
+    const dzh = (hb - hf) / (2 * eps);
+    const slope = Math.hypot(dxh, dzh);
+    if (slope > 1.05){ // ~46°
+      const k = Math.min(0.6, (slope - 1.0) * 0.8);
+      PLAYER.vel.x += dxh * k * 14 * dt;
+      PLAYER.vel.z += dzh * k * 14 * dt;
+    }
   }
   // water push-up (don't drown in Stage 1)
   if (PLAYER.pos.y < -2){ PLAYER.pos.y = -2; PLAYER.vel.y = 0; }
@@ -2499,7 +2608,10 @@ class Dino {
       this._countedDeath = true;
       onKill(this);
     }
-    if (typeof AUDIO !== 'undefined') AUDIO.roar(this.species, 0.3);
+    if (typeof AUDIO !== 'undefined'){
+      if (AUDIO.spatialRoar) AUDIO.spatialRoar(this.species, this.pos.x, this.pos.y + 1.4, this.pos.z, 0.35);
+      else AUDIO.roar(this.species, 0.3);
+    }
   }
 
   remove(){
@@ -2911,6 +3023,8 @@ function spawnRoost(){
   ROOST.pos.y = heightAt(ROOST.pos.x, ROOST.pos.z);
   ROOST.mesh.position.copy(ROOST.pos);
   scene.add(ROOST.mesh);
+  // Totem collider so you can't walk through the trunk of the carved pole.
+  addStaticCollider({ x: ROOST.pos.x, z: ROOST.pos.z, r: 0.7, kind: 'totem' });
 }
 function updateRoost(dt){
   if (!ROOST.mesh) return;
@@ -3275,6 +3389,9 @@ document.querySelectorAll('[data-roost]').forEach(el => {
     } else if (act === 'photo'){
       closeModals();
       togglePhoto();
+    } else if (act === 'settings'){
+      closeModals();
+      openSettings();
     } else if (act === 'leave'){
       closeModals();
     }
@@ -3786,7 +3903,565 @@ function updateAmbientRoars(dt){
   const candidates = dinos.filter(d => !d.dying && !d.tamed && d.pos.distanceToSquared(PLAYER.pos) < 120 * 120);
   if (candidates.length === 0) return;
   const d = pick(candidates);
-  AUDIO.roar(d.species, 0.18 + Math.random() * 0.12);
+  if (AUDIO.spatialRoar) AUDIO.spatialRoar(d.species, d.pos.x, d.pos.y + 1.5, d.pos.z, 0.22 + Math.random() * 0.1);
+  else AUDIO.roar(d.species, 0.18 + Math.random() * 0.12);
+}
+
+/* === STAGE V — Realism Polish ======================================== */
+
+/* Settings — quality knobs. Stage V adds expensive features, all gated
+   so mid-range mobile can scale them down without losing the core. */
+const SETTINGS = {
+  quality: 'high',         // 'low' | 'medium' | 'high' | 'ultra'
+  shadows: true,
+  shadowRes: 1024,
+  particles: true,
+  cameraBob: true,
+  cameraInertia: true,
+  windGrass: true,
+  footprints: true,
+  swarms: true,
+  audioOcclusion: true,
+  debugColliders: false,
+};
+
+function applyQuality(){
+  const q = SETTINGS.quality;
+  const map = {
+    low:    { shadows:false, shadowRes:512,  particles:false, windGrass:false, footprints:false, swarms:false, fogFar:0.55, pixelRatio:1.0, bobInt:0.6 },
+    medium: { shadows:true,  shadowRes:1024, particles:true,  windGrass:true,  footprints:true,  swarms:true,  fogFar:0.8,  pixelRatio:1.0, bobInt:0.8 },
+    high:   { shadows:true,  shadowRes:1024, particles:true,  windGrass:true,  footprints:true,  swarms:true,  fogFar:1.0,  pixelRatio:Math.min(devicePixelRatio,1.5), bobInt:1.0 },
+    ultra:  { shadows:true,  shadowRes:2048, particles:true,  windGrass:true,  footprints:true,  swarms:true,  fogFar:1.2,  pixelRatio:Math.min(devicePixelRatio,2),   bobInt:1.0 },
+  }[q] || {};
+  Object.assign(SETTINGS, map);
+  renderer.shadowMap.enabled = !!SETTINGS.shadows;
+  sunLight.castShadow = !!SETTINGS.shadows;
+  sunLight.shadow.mapSize.set(SETTINGS.shadowRes, SETTINGS.shadowRes);
+  if (sunLight.shadow.map){ sunLight.shadow.map.dispose(); sunLight.shadow.map = null; }
+  renderer.setPixelRatio(SETTINGS.pixelRatio);
+  scene.fog.far = WORLD.fogFar * SETTINGS.fogFar;
+}
+
+/* === Wind / grass interaction ========================================
+   Inject a small vertex displacement into the grass material so each
+   billboard sways with global wind and bends away from the player. */
+const WIND = {
+  uTime: { value: 0 },
+  uPlayer: { value: new THREE.Vector3() },
+  uWindDir: { value: new THREE.Vector2(1, 0.4) },
+  uIntensity: { value: 1.0 },
+};
+function patchGrassWind(grassIM){
+  if (!grassIM) return;
+  const mat = grassIM.material;
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = WIND.uTime;
+    shader.uniforms.uPlayer = WIND.uPlayer;
+    shader.uniforms.uWindDir = WIND.uWindDir;
+    shader.uniforms.uWindInt = WIND.uIntensity;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <common>',
+      `#include <common>
+       uniform float uTime;
+       uniform vec3  uPlayer;
+       uniform vec2  uWindDir;
+       uniform float uWindInt;`
+    );
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+       // World position of this vertex (accounts for instanceMatrix on InstancedMesh).
+       #ifdef USE_INSTANCING
+         vec4 _wp = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+       #else
+         vec4 _wp = modelMatrix * vec4(transformed, 1.0);
+       #endif
+       float topMask = clamp(position.y - 0.2, 0.0, 1.0);
+       float wave = sin(uTime * 1.6 + _wp.x * 0.18 + _wp.z * 0.18) * 0.35
+                  + sin(uTime * 2.7 + _wp.x * 0.31)            * 0.18;
+       vec2 wind = uWindDir * wave * topMask * uWindInt;
+       transformed.x += wind.x;
+       transformed.z += wind.y;
+       // Push away from player when nearby
+       vec2 toP = _wp.xz - uPlayer.xz;
+       float d2 = dot(toP, toP);
+       if (d2 < 9.0){
+         float k = (1.0 - d2 / 9.0);
+         vec2 dir = normalize(toP + vec2(0.0001));
+         transformed.xz += dir * k * topMask * 0.55;
+       }`
+    );
+  };
+  mat.needsUpdate = true;
+}
+// We patched grass instancing inside spawnGrass; find the IM and patch.
+scene.traverse(o => {
+  if (!o.isInstancedMesh) return;
+  // Heuristic: grass uses PlaneGeometry, count > 100, doesn't cast shadow.
+  if (o.geometry?.type === 'PlaneGeometry' && o.count > 100 && !o.castShadow){
+    patchGrassWind(o);
+  }
+});
+
+/* === Camera polish — inertia + subtle head-bob ====================== */
+const CAM_POLISH = {
+  smoothedYaw: 0,
+  smoothedPitch: 0,
+  bobPhase: 0,
+};
+CAM_POLISH.smoothedYaw = CAM.yaw;
+CAM_POLISH.smoothedPitch = CAM.pitch;
+
+/* === Footprint decals =============================================== */
+const FOOTPRINTS = [];
+const FOOTPRINT_GEO = new THREE.PlaneGeometry(0.32, 0.5);
+FOOTPRINT_GEO.rotateX(-Math.PI / 2);
+function footprintColor(biomeId){
+  return ({
+    plains:  0x2a1a10,
+    volcano: 0x1a0a08,
+    tundra:  0xa8c8d8,
+    bayou:   0x18301a,
+    crystal: 0x2a2050,
+    desert:  0x7a5a30,
+  })[biomeId] || 0x2a1a10;
+}
+let _footTimer = 0;
+let _footAlt = false;
+function maybeSpawnFootprint(dt){
+  if (!SETTINGS.footprints || !PLAYER.onGround) return;
+  const sp = Math.hypot(PLAYER.vel.x, PLAYER.vel.z);
+  if (sp < 1.0) return;
+  _footTimer -= dt * (sp * 0.4);
+  if (_footTimer > 0) return;
+  _footTimer = 0.35;
+  _footAlt = !_footAlt;
+  // Offset to left/right of facing direction
+  const off = _footAlt ? 0.22 : -0.22;
+  const fx = PLAYER.pos.x + Math.cos(PLAYER.yaw) * off;
+  const fz = PLAYER.pos.z - Math.sin(PLAYER.yaw) * off;
+  const fy = heightAt(fx, fz) + 0.02;
+  const b = biomeAt(fx, fz);
+  const mat = new THREE.MeshBasicMaterial({
+    color: footprintColor(b.id), transparent: true, opacity: 0.5, depthWrite: false,
+  });
+  const m = new THREE.Mesh(FOOTPRINT_GEO, mat);
+  m.position.set(fx, fy, fz);
+  m.rotation.y = PLAYER.yaw + (Math.random() - 0.5) * 0.2;
+  scene.add(m);
+  FOOTPRINTS.push({ mesh: m, mat, age: 0, life: 24 });
+  // Footstep audio cue + dust
+  playFootstep(b.id, fx, fy, fz, PLAYER.sprinting);
+  if (SETTINGS.particles && PLAYER.sprinting) spawnDust(fx, fy, fz, b);
+  // Quest progress (none, but quests scan biomes via banner — separate)
+}
+function updateFootprints(dt){
+  for (let i = FOOTPRINTS.length - 1; i >= 0; i--){
+    const f = FOOTPRINTS[i];
+    f.age += dt;
+    if (f.age >= f.life){
+      scene.remove(f.mesh);
+      f.mat.dispose();
+      FOOTPRINTS.splice(i, 1);
+    } else {
+      f.mat.opacity = Math.max(0, 0.5 * (1 - f.age / f.life));
+    }
+  }
+}
+
+/* === Dust kicks (sprint) ============================================ */
+const DUST = { pool: [], i: 0, max: 36, geo: null };
+function initDust(){
+  DUST.geo = new THREE.SphereGeometry(0.16, 6, 4);
+  for (let i = 0; i < DUST.max; i++){
+    const m = new THREE.Mesh(DUST.geo, new THREE.MeshBasicMaterial({
+      color: 0xc8b88a, transparent: true, opacity: 0.6, depthWrite: false,
+    }));
+    m.visible = false;
+    scene.add(m);
+    DUST.pool.push({ mesh: m, vel: new THREE.Vector3(), life: 0, maxLife: 0 });
+  }
+}
+function spawnDust(x, y, z, biome){
+  for (let k = 0; k < 3; k++){
+    const p = DUST.pool[DUST.i % DUST.max];
+    DUST.i++;
+    p.mesh.position.set(x, y + 0.05, z);
+    p.mesh.material.color.setHex(
+      ({plains:0xc8b88a, desert:0xe8c890, volcano:0x4a2a20, tundra:0xe8f0f8, bayou:0x6a8a64, crystal:0xb0a0e8})[biome.id] || 0xc8b88a
+    );
+    p.vel.set((Math.random()-0.5)*1.4, 0.6 + Math.random()*1.2, (Math.random()-0.5)*1.4);
+    p.life = 0; p.maxLife = 0.8 + Math.random() * 0.4;
+    p.mesh.visible = true;
+    p.mesh.scale.setScalar(0.6 + Math.random() * 0.6);
+  }
+}
+function updateDust(dt){
+  for (const p of DUST.pool){
+    if (!p.mesh.visible) continue;
+    p.life += dt;
+    if (p.life >= p.maxLife){ p.mesh.visible = false; continue; }
+    p.vel.y -= 1.4 * dt; // soft gravity
+    p.mesh.position.addScaledVector(p.vel, dt);
+    const t = p.life / p.maxLife;
+    p.mesh.material.opacity = 0.6 * (1 - t);
+    p.mesh.scale.setScalar((0.6 + (1 - t) * 0.4) * (1 + t));
+  }
+}
+
+/* === Small creature swarms (dragonflies + ground birds) =============== */
+const SWARMS = [];
+function spawnSwarms(){
+  if (!SETTINGS.swarms) return;
+  const rng = mulberry32(WORLD.seed + 309);
+  for (let i = 0; i < 24; i++){
+    const cx = (rng() - 0.5) * WORLD.size * 1.7;
+    const cz = (rng() - 0.5) * WORLD.size * 1.7;
+    const b = biomeAt(cx, cz);
+    if (b.id === 'volcano') continue;
+    const isFlier = rng() > 0.4;
+    const count = 6 + Math.floor(rng() * 6);
+    const group = new THREE.Group();
+    const color = isFlier
+      ? ({plains:0x66c8ff, tundra:0xffffff, bayou:0xb0ff70, crystal:0xb070ff, desert:0xffe080})[b.id] || 0xffffff
+      : ({plains:0xc8b06a, tundra:0xe8e8e8, bayou:0x6a8a30, crystal:0xa0a0e8, desert:0xa07a40})[b.id] || 0x8a6a40;
+    const geo = isFlier ? new THREE.OctahedronGeometry(0.06, 0) : new THREE.SphereGeometry(0.12, 5, 4);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 });
+    const members = [];
+    for (let j = 0; j < count; j++){
+      const m = new THREE.Mesh(geo, mat);
+      const a = rng() * TAU;
+      const r = rng() * 1.6;
+      m.position.set(Math.cos(a) * r, isFlier ? 1.6 + rng() * 1.5 : 0.4, Math.sin(a) * r);
+      group.add(m);
+      members.push({ mesh: m, phase: rng() * TAU });
+    }
+    group.position.set(cx, heightAt(cx, cz) + 0.1, cz);
+    scene.add(group);
+    SWARMS.push({ group, members, center: new THREE.Vector3(cx, 0, cz), isFlier, scattered: 0, r: 1.8 });
+  }
+}
+function updateSwarms(dt){
+  if (!SETTINGS.swarms) return;
+  const t = performance.now() * 0.001;
+  for (const sw of SWARMS){
+    // Cull far swarms entirely
+    const d = sw.group.position.distanceToSquared(PLAYER.pos);
+    sw.group.visible = d < 80 * 80;
+    if (!sw.group.visible) continue;
+    // Scatter when player approaches
+    if (d < 12 * 12 && sw.scattered <= 0) sw.scattered = 1.4;
+    sw.scattered = Math.max(0, sw.scattered - dt);
+    for (const m of sw.members){
+      const p = m.mesh;
+      const baseY = sw.isFlier ? 1.6 + Math.sin(t * 1.5 + m.phase) * 0.4
+                                : 0.4 + Math.sin(t * 6 + m.phase) * 0.08;
+      const swirl = sw.isFlier ? 1.0 : 0.4;
+      p.position.x = Math.cos(t * swirl + m.phase) * (sw.r + sw.scattered * 2);
+      p.position.z = Math.sin(t * swirl + m.phase) * (sw.r + sw.scattered * 2);
+      p.position.y = baseY + (sw.scattered * 0.6);
+    }
+  }
+}
+
+/* === Surface footstep + 3D spatial audio =========================== */
+function playFootstep(biomeId, x, y, z, sprint){
+  if (!AUDIO.enabled || !AUDIO.ctx) return;
+  const ctx = AUDIO.ctx, now = ctx.currentTime;
+  const cfg = {
+    plains:  { freq: 600, vol: 0.10 },
+    volcano: { freq: 400, vol: 0.14 },
+    tundra:  { freq: 1200, vol: 0.10 },
+    bayou:   { freq: 320, vol: 0.16 },
+    crystal: { freq: 1800, vol: 0.09 },
+    desert:  { freq: 480, vol: 0.10 },
+  }[biomeId] || { freq: 600, vol: 0.10 };
+  const dur = sprint ? 0.10 : 0.13;
+  const src = AUDIO._noiseBuf(dur);
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = cfg.freq * (0.85 + Math.random() * 0.3); bp.Q.value = 1.4;
+  const g = ctx.createGain(); g.gain.value = cfg.vol * (sprint ? 1.4 : 1.0);
+  g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  src.connect(bp); bp.connect(g);
+  // Routed through positional panner — uses player position (camera-relative)
+  spatialPlay(g, x, y, z);
+  src.start(now);
+}
+
+/* Pan a Web Audio source by its world position relative to camera. */
+const _audioListener = { x: 0, z: 0, yaw: 0 };
+function updateAudioListener(){
+  if (!AUDIO.ctx?.listener) return;
+  _audioListener.x = camera.position.x;
+  _audioListener.z = camera.position.z;
+  _audioListener.yaw = CAM.yaw;
+  // 3D listener orientation — Web Audio uses forward & up unit vectors.
+  try {
+    if (AUDIO.ctx.listener.positionX){
+      AUDIO.ctx.listener.positionX.value = camera.position.x;
+      AUDIO.ctx.listener.positionY.value = camera.position.y;
+      AUDIO.ctx.listener.positionZ.value = camera.position.z;
+      AUDIO.ctx.listener.forwardX.value = -Math.sin(CAM.yaw);
+      AUDIO.ctx.listener.forwardY.value = 0;
+      AUDIO.ctx.listener.forwardZ.value = -Math.cos(CAM.yaw);
+      AUDIO.ctx.listener.upX.value = 0;
+      AUDIO.ctx.listener.upY.value = 1;
+      AUDIO.ctx.listener.upZ.value = 0;
+    }
+  } catch(_){}
+}
+function spatialPlay(src, x, y, z){
+  if (!AUDIO.ctx) return;
+  // Simple stereo pan + distance attenuation. PannerNode would be ideal but
+  // we keep this lightweight and predictable across browsers.
+  const dx = x - _audioListener.x;
+  const dz = z - _audioListener.z;
+  const dist = Math.hypot(dx, dz);
+  const cos = Math.cos(-_audioListener.yaw);
+  const sin = Math.sin(-_audioListener.yaw);
+  const lx = dx * cos - dz * sin; // local x (right-positive)
+  const distAtten = clamp(1 - dist / 80, 0, 1);
+  const pan = clamp(lx / 20, -1, 1);
+  const stereo = AUDIO.ctx.createStereoPanner?.();
+  const distG  = AUDIO.ctx.createGain();
+  distG.gain.value = distAtten;
+  // Occlusion: lowpass if blocked by static geometry (cheap raycast)
+  let needFilter = false;
+  if (SETTINGS.audioOcclusion && dist > 4){
+    needFilter = isOccluded(x, z);
+  }
+  if (stereo){
+    stereo.pan.value = pan;
+    src.connect(stereo); stereo.connect(distG);
+  } else {
+    src.connect(distG);
+  }
+  if (needFilter){
+    const lp = AUDIO.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;
+    distG.connect(lp); lp.connect(AUDIO.master);
+  } else {
+    distG.connect(AUDIO.master);
+  }
+}
+
+/* Cheap audio occlusion — sample static colliders along the line of sound. */
+function isOccluded(x, z){
+  const dx = x - _audioListener.x;
+  const dz = z - _audioListener.z;
+  const d = Math.hypot(dx, dz);
+  const steps = Math.min(8, Math.max(2, Math.floor(d / 6)));
+  for (let i = 1; i < steps; i++){
+    const t = i / steps;
+    const sx = _audioListener.x + dx * t;
+    const sz = _audioListener.z + dz * t;
+    nearbyStaticColliders(sx, sz, _nearTmp);
+    for (let j = 0; j < _nearTmp.length; j++){
+      const c = _nearTmp[j];
+      const cx = sx - c.x, cz = sz - c.z;
+      if (cx*cx + cz*cz < c.r * c.r) return true;
+    }
+  }
+  return false;
+}
+
+/* === Music ducking ================================================== */
+function duckMusic(amount = 0.5, dur = 0.25){
+  if (!AUDIO.music || !AUDIO.ctx) return;
+  const now = AUDIO.ctx.currentTime;
+  const cur = AUDIO.combatMood > 0.5 ? AUDIO.music.combat : AUDIO.music.explore;
+  const base = AUDIO.combatMood > 0.5 ? 0.32 : 0.18;
+  cur.gain.cancelScheduledValues(now);
+  cur.gain.setValueAtTime(cur.gain.value, now);
+  cur.gain.linearRampToValueAtTime(base * (1 - amount), now + 0.05);
+  cur.gain.linearRampToValueAtTime(base, now + dur);
+}
+// Hook hits + damage to duck music; wrap original AUDIO calls.
+const _origAudioHit = AUDIO.hit.bind(AUDIO);
+AUDIO.hit = (crit, vol) => { _origAudioHit(crit, vol); duckMusic(0.55, 0.3); };
+const _origAudioRoar = AUDIO.roar.bind(AUDIO);
+AUDIO.roar = (sp, vol) => { _origAudioRoar(sp, vol); duckMusic(0.5, 0.6); };
+
+/* Spatial roar — same synth as AUDIO.roar, routed through spatialPlay. */
+AUDIO.spatialRoar = function(species, x, y, z, vol = 0.3){
+  if (!this.enabled || !this.ctx) return;
+  const ctx = this.ctx, now = ctx.currentTime;
+  const size = (SPECIES[species]?.size) || 1;
+  const basePitch = 320 / Math.max(0.4, size * 1.4);
+  const dur = 0.55 + Math.random() * 0.5;
+  const outGain = ctx.createGain();
+  // Noise body
+  const src = this._noiseBuf(dur);
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = basePitch * 1.2; bp.Q.value = 3;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = basePitch * 4;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(vol, now + 0.06);
+  g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  src.connect(bp); bp.connect(lp); lp.connect(g); g.connect(outGain);
+  src.start(now);
+  // Tonal layer
+  const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(basePitch, now);
+  osc.frequency.exponentialRampToValueAtTime(basePitch * 0.55, now + dur);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0, now);
+  og.gain.linearRampToValueAtTime(vol * 0.5, now + 0.1);
+  og.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  const olp = ctx.createBiquadFilter(); olp.type = 'lowpass'; olp.frequency.value = basePitch * 5;
+  osc.connect(olp); olp.connect(og); og.connect(outGain);
+  osc.start(now); osc.stop(now + dur);
+  spatialPlay(outGain, x, y, z);
+  duckMusic(0.5, 0.6);
+};
+
+/* === Debug colliders wireframe ====================================== */
+const COLLIDER_DEBUG = new THREE.Group();
+COLLIDER_DEBUG.visible = false;
+scene.add(COLLIDER_DEBUG);
+function buildColliderDebug(){
+  const cylGeo = new THREE.CylinderGeometry(1, 1, 4, 8, 1, true);
+  const sphGeo = new THREE.SphereGeometry(1, 8, 6);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff4060, wireframe: true });
+  STATIC_GRID.forEach(cell => {
+    for (const c of cell){
+      const geo = c.kind === 'tree' ? cylGeo : sphGeo;
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(c.x, heightAt(c.x, c.z) + 2, c.z);
+      m.scale.set(c.r, c.kind === 'tree' ? 2 : c.r, c.r);
+      COLLIDER_DEBUG.add(m);
+    }
+  });
+}
+buildColliderDebug();
+
+function toggleColliders(){
+  SETTINGS.debugColliders = !SETTINGS.debugColliders;
+  COLLIDER_DEBUG.visible = SETTINGS.debugColliders;
+  showBanner(SETTINGS.debugColliders ? 'Colliders shown' : 'Colliders hidden', 1500);
+}
+
+/* Long-press top-left corner to toggle, or F1 key. */
+let _ttTimer = null;
+addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  if (t && t.clientX < 60 && t.clientY < 60){
+    _ttTimer = setTimeout(toggleColliders, 700);
+  }
+}, { passive: true });
+addEventListener('touchend', () => { clearTimeout(_ttTimer); }, { passive: true });
+addEventListener('keydown', e => {
+  if (e.code === 'F1'){ e.preventDefault(); toggleColliders(); }
+});
+
+/* === Day/night colour refinement — warmer dawn, cool moonlit night === */
+function refineDayNight(){
+  // We can't easily replace updateTime; instead, after it runs each frame we
+  // post-process the sun colour to give it more character.
+}
+
+/* === Init Stage V systems =========================================== */
+initDust();
+spawnSwarms();
+applyQuality();
+
+/* === Settings modal — built dynamically the first time it's opened === */
+function openSettings(){
+  let modal = document.getElementById('modal-settings');
+  if (!modal){
+    modal = document.createElement('div');
+    modal.className = 'modal'; modal.id = 'modal-settings';
+    modal.innerHTML = `<div class="panel" style="position:relative;">
+      <button class="close" data-modal-close>×</button>
+      <h2>Settings</h2>
+      <div class="sub">Scale for your device</div>
+      <div style="margin-top:12px;">
+        <div class="label" style="font-size:10px;letter-spacing:.25em;opacity:.7;margin-bottom:6px;">Preset</div>
+        <div class="row-btns" id="sx-presets">
+          ${['low','medium','high','ultra'].map(q => `<button data-set-q="${q}">${q.toUpperCase()}</button>`).join('')}
+        </div>
+      </div>
+      <div id="sx-toggles" style="margin-top:14px;display:flex;flex-direction:column;gap:6px;"></div>
+      <div class="row-btns"><button data-modal-close>Done</button></div>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModals(); });
+    modal.querySelectorAll('[data-modal-close]').forEach(el => el.addEventListener('click', closeModals));
+    modal.querySelectorAll('[data-set-q]').forEach(b => b.addEventListener('click', () => {
+      SETTINGS.quality = b.dataset.setQ;
+      applyQuality();
+      buildSettingsBody(); // refresh
+      showBanner(`Quality · ${SETTINGS.quality}`, 1500);
+    }));
+  }
+  buildSettingsBody();
+  openModal('modal-settings');
+}
+function buildSettingsBody(){
+  const body = document.querySelector('#modal-settings #sx-toggles');
+  if (!body) return;
+  const toggles = [
+    ['shadows','Shadows'],
+    ['particles','Particles'],
+    ['cameraBob','Camera bob'],
+    ['cameraInertia','Camera inertia'],
+    ['windGrass','Wind on grass'],
+    ['footprints','Footprints'],
+    ['swarms','Insect swarms'],
+    ['audioOcclusion','Audio occlusion'],
+    ['debugColliders','Debug colliders'],
+  ];
+  body.innerHTML = '';
+  for (const [k, label] of toggles){
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.15em;';
+    row.innerHTML = `<span>${label}</span>
+      <button data-toggle="${k}" style="padding:4px 12px;font-size:9px;border-radius:99px;background:${SETTINGS[k] ? 'rgba(124,242,200,.3)' : 'rgba(255,255,255,.06)'};border:1px solid ${SETTINGS[k] ? 'var(--accent)' : 'rgba(255,255,255,.2)'};color:${SETTINGS[k] ? 'var(--accent)' : '#fff'};">${SETTINGS[k] ? 'ON' : 'OFF'}</button>`;
+    body.appendChild(row);
+  }
+  body.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.toggle;
+    SETTINGS[k] = !SETTINGS[k];
+    if (k === 'shadows'){ renderer.shadowMap.enabled = SETTINGS.shadows; sunLight.castShadow = SETTINGS.shadows; }
+    if (k === 'debugColliders') COLLIDER_DEBUG.visible = SETTINGS.debugColliders;
+    buildSettingsBody();
+  }));
+}
+addEventListener('keydown', e => {
+  if (e.code === 'KeyO'){ openSettings(); }
+});
+
+/* === Stage V per-frame update aggregator ============================== */
+function updateStageV(dt){
+  // Wind time
+  WIND.uTime.value = performance.now() * 0.001;
+  WIND.uPlayer.value.copy(PLAYER.pos);
+  maybeSpawnFootprint(dt);
+  updateFootprints(dt);
+  if (SETTINGS.particles) updateDust(dt);
+  updateSwarms(dt);
+  updateAudioListener();
+}
+
+/* === Camera inertia + bob ==========================================
+   Run after the base updateCamera. Smooths CAM.yaw and adds a small
+   sinusoidal lift while running. */
+function applyCameraPolish(dt){
+  if (SETTINGS.cameraInertia){
+    const k = 1 - Math.pow(0.001, dt * 5);
+    CAM_POLISH.smoothedYaw = lerp(CAM_POLISH.smoothedYaw, CAM.yaw, k);
+    CAM_POLISH.smoothedPitch = lerp(CAM_POLISH.smoothedPitch, CAM.pitch, k);
+  } else {
+    CAM_POLISH.smoothedYaw = CAM.yaw;
+    CAM_POLISH.smoothedPitch = CAM.pitch;
+  }
+  if (SETTINGS.cameraBob && PLAYER.onGround && !MOUNT.active){
+    const sp = Math.hypot(PLAYER.vel.x, PLAYER.vel.z);
+    if (sp > 1.0){
+      CAM_POLISH.bobPhase += dt * (sp * 0.5);
+      const amp = 0.06 * (PLAYER.sprinting ? 1.4 : 1.0) * Math.min(1, sp * 0.15);
+      camera.position.y += Math.sin(CAM_POLISH.bobPhase * 6) * amp;
+      camera.position.x += Math.cos(CAM_POLISH.bobPhase * 3) * amp * 0.4;
+    }
+  }
 }
 
 /* Music + ambient should react to combat presence and biome. */
@@ -3966,6 +4641,7 @@ function save(){
         dailyId: QUESTS.dailyId, dailyDay: QUESTS.dailyDay,
       } : null,
       dex: (typeof DEX !== 'undefined') ? { scanned: DEX.scanned, killed: DEX.killed, tamed: DEX.tamed, mythic: DEX.mythic } : null,
+      settings: (typeof SETTINGS !== 'undefined') ? { ...SETTINGS } : null,
     }));
   } catch(_){}
 }
@@ -4019,6 +4695,10 @@ function load(){
       DEX.tamed   = s.dex.tamed   || {};
       DEX.mythic  = !!s.dex.mythic;
     }
+    if (s.settings && typeof SETTINGS !== 'undefined'){
+      Object.assign(SETTINGS, s.settings);
+      if (typeof applyQuality === 'function') applyQuality();
+    }
   } catch(_){}
 }
 load();
@@ -4059,8 +4739,10 @@ function loop(now){
     updateContextPrompt();
     updateAudioMood(dtRaw);
     updateAmbientRoars(dtRaw);
+    updateStageV(dtRaw);
     updateTime(dt);
     updateCamera(dtRaw);
+    applyCameraPolish(dtRaw);
 
     // perf: cull distant dinos visibility
     for (const d of dinos){
